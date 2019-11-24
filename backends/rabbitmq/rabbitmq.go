@@ -50,7 +50,7 @@ func New(cfg *config.Config, ctx context.Context) (*RabbitMQ, error) {
 		return nil, errors.Wrap(err, "Channel instantiation failure")
 	}
 
-	queue, err := ch.QueueDeclare("twilio-message-status", true, false, false, false, nil)
+	queue, err := ch.QueueDeclare("events", true, false, false, false, nil)
 	if err != nil {
 		return nil, err
 	}
