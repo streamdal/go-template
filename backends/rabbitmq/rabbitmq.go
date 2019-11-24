@@ -13,10 +13,6 @@ import (
 	"github.com/batchcorp/go-template/config"
 )
 
-const (
-	BatchSize = 1
-)
-
 //go:generate counterfeiter -o ../../fakes/rabbitmq/rabbitmq.go . IRabbitMQ
 
 type IRabbitMQ interface {
@@ -49,13 +45,7 @@ func New(cfg *config.Config, ctx context.Context) (*RabbitMQ, error) {
 		return nil, errors.Wrap(err, "channel instantiation failure")
 	}
 
-	eventsQueue, err := ch.QueueDeclare(
-		cfg.EventsQueueName,
-		true,
-		false,
-		false,
-		false,
-		nil)
+	queue, err := ch.QueueDeclare("events", true, false, false, false, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "queue declaration failure")
 	}
@@ -64,7 +54,7 @@ func New(cfg *config.Config, ctx context.Context) (*RabbitMQ, error) {
 		log:             logrus.WithField("pkg", "backends.rabbitmq"),
 		Client:          ac,
 		RabbitMQChannel: ch,
-		EventsQueue:     eventsQueue,
+		EventsQueue:     queue,
 		WorkerChannel:   make(chan string),
 		DefaultContext:  ctx,
 		Looper:          director.NewFreeLooper(director.FOREVER, make(chan error)),
