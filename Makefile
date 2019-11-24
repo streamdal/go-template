@@ -31,7 +31,7 @@ help:
 run: description = Run go-template
 run:
 	DEFAULT_URL="https://google.com/" \
-	$(GO) run `ls -1 *.go | grep -v _test.go`
+	$(GO) run `ls -1 *.go | grep -v _test.go` -d
 
 .PHONY: start/deps
 start/deps: description = Start dependencies
