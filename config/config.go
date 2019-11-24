@@ -16,6 +16,8 @@ type Config struct {
 	HealthFreqSec int    `envconfig:"HEALTH_FREQ_SEC" default:"60"`
 	EnvName       string `envconfig:"ENV_NAME" default:"dev"`
 	ServiceName   string `envconfig:"SERVICE_NAME" default:"go-template"`
+
+	EventsQueueName string `envconfig:"EVENTS_QUEUE_NAME" default:"events"`
 }
 
 func New() *Config {

@@ -3,7 +3,6 @@ package rabbitmq
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/pkg/errors"
@@ -31,7 +30,7 @@ type RabbitMQ struct {
 	log             *logrus.Entry
 	Client          *amqp.Connection
 	RabbitMQChannel *amqp.Channel
-	Queue           amqp.Queue
+	EventsQueue     amqp.Queue
 	WorkerChannel   chan string
 	prefetchCount   int
 	prefetchSize    int
@@ -47,19 +46,25 @@ func New(cfg *config.Config, ctx context.Context) (*RabbitMQ, error) {
 
 	ch, err := ac.Channel()
 	if err != nil {
-		return nil, errors.Wrap(err, "Channel instantiation failure")
+		return nil, errors.Wrap(err, "channel instantiation failure")
 	}
 
-	queue, err := ch.QueueDeclare("twilio-message-status", true, false, false, false, nil)
+	eventsQueue, err := ch.QueueDeclare(
+		cfg.EventsQueueName,
+		true,
+		false,
+		false,
+		false,
+		nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "queue declaration failure")
 	}
 
 	return &RabbitMQ{
 		log:             logrus.WithField("pkg", "backends.rabbitmq"),
 		Client:          ac,
 		RabbitMQChannel: ch,
-		Queue:           queue,
+		EventsQueue:     eventsQueue,
 		WorkerChannel:   make(chan string),
 		DefaultContext:  ctx,
 		Looper:          director.NewFreeLooper(director.FOREVER, make(chan error)),
@@ -72,7 +77,7 @@ func (r *RabbitMQ) Get() error {
 
 func (r *RabbitMQ) Listen() {
 	messageChannel, err := r.RabbitMQChannel.Consume(
-		r.Queue.Name,
+		r.EventsQueue.Name,
 		"",
 		false,
 		false,
@@ -84,16 +89,15 @@ func (r *RabbitMQ) Listen() {
 		fmt.Println(err)
 	}
 
-	r.log.Printf("Consumer ready, PID: %d", os.Getpid())
+	r.log.Debugf("Consumer ready, PID: %d", os.Getpid())
 
 	r.Looper.Loop(func() error {
 		select {
 		case msg := <-messageChannel:
-			r.WorkerChannel <- string(msg.Body)
+			r.log.Debugf("Received message on '%s' queue: %s", r.EventsQueue.Name, err)
+
 			if err := msg.Ack(false); err != nil {
-				log.Printf("Error acknowledging message : %s", err)
-			} else {
-				log.Printf("Acknowledged message")
+				r.log.Errorf("Error acknowledging message : %s", err)
 			}
 		case <-r.DefaultContext.Done():
 			r.Looper.Quit()
@@ -104,7 +108,7 @@ func (r *RabbitMQ) Listen() {
 }
 
 func (r *RabbitMQ) Publish(body []byte) {
-	err := r.RabbitMQChannel.Publish("", r.Queue.Name, false, false, amqp.Publishing{
+	err := r.RabbitMQChannel.Publish("", r.EventsQueue.Name, false, false, amqp.Publishing{
 		DeliveryMode: amqp.Persistent,
 		ContentType:  "text/plain",
 		Body:         body,
@@ -114,7 +118,7 @@ func (r *RabbitMQ) Publish(body []byte) {
 		r.log.Fatalf("Error publishing message: %s", err.Error())
 	}
 
-	r.log.Printf("Publishing body %s", string(body))
+	r.log.Debugf("Publishing body %s", string(body))
 }
 
 func (r *RabbitMQ) GetConsumerChannel() chan string {
