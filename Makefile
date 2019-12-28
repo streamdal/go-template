@@ -1,7 +1,7 @@
 VERSION ?= $(shell git rev-parse --short HEAD)
 SERVICE = go-template
 
-GO = CGO_ENABLED=$(CGO_ENABLED) go
+GO = CGO_ENABLED=$(CGO_ENABLED) GOFLAGS=-mod=vendor go
 CGO_ENABLED ?= 0
 GO_BUILD_FLAGS = -ldflags "-X main.version=${VERSION}"
 
@@ -27,16 +27,25 @@ help:
 
 ### Dev
 
+.PHONY: setup/linux
+setup/linux: description = Install dev tools for linux
+setup/linux:
+	GO111MODULE=off go get github.com/maxbrunsfeld/counterfeiter
+
+.PHONY: setup/darwin
+setup/darwin: description = Install dev tools for darwin
+setup/darwin:
+	GO111MODULE=off go get github.com/maxbrunsfeld/counterfeiter
+
 .PHONY: run
-run: description = Run go-template
+run: description = Run $(SERVICE)
 run:
-	DEFAULT_URL="https://google.com/" \
 	$(GO) run `ls -1 *.go | grep -v _test.go` -d
 
 .PHONY: start/deps
 start/deps: description = Start dependencies
 start/deps:
-	docker-compose up -d rabbitmq
+	docker-compose up -d
 
 ### Build
 
@@ -65,7 +74,7 @@ clean:
 test: description = Run Go unit tests
 test: GOFLAGS=
 test:
-	$(GO) test ./...
+	$(GO) test ./...1
 
 .PHONY: testv
 testv: description = Run Go unit tests (verbose)
@@ -78,8 +87,8 @@ testv:
 .PHONY: docker/build
 docker/build: description = Build docker image
 docker/build:
-	docker build -t docker.pkg.github.com/batchcorp/$(SERVICE):$(VERSION) \
-	-t docker.pkg.github.com/batchcorp/$(SERVICE):latest \
+	docker build -t docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):$(VERSION) \
+	-t docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):latest \
 	-f ./Dockerfile .
 
 .PHONY: docker/run
@@ -90,4 +99,5 @@ docker/run:
 .PHONY: docker/push
 docker/push: description = Push local docker image
 docker/push:
-	docker push quay.io/shimmur/$(SERVICE):$(VERSION)
+	docker push docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):$(VERSION) && \
+	docker push docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):latest
