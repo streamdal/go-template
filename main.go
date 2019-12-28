@@ -56,11 +56,19 @@ func main() {
 		log.WithError(err).Fatal("Could not setup dependencies")
 	}
 
-	go d.RabbitMQ.Listen()
-
 	log = log.WithField("environment", cfg.EnvName)
 
+	// Start eventbus consumer
+	if err := d.EventBusService.StartConsumers(); err != nil {
+		log.WithError(err).Fatal("Unable to start eventbus consumers")
+	}
+
+	// Start inbound consumer
+	if err := d.InboundService.StartConsumers(); err != nil {
+		log.WithError(err).Fatal("Unable to start inbound consumers")
+	}
+
+	// Start API server
 	a := api.New(cfg, d, version)
 	log.Fatal(a.Run())
-
 }
