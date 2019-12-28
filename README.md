@@ -15,5 +15,5 @@ To use this template:
 
 1. Use Github template to generate new project
 1. Replace the strings `go-template` and `GO_TEMPLATE` with preferred `service-name` and `SERVICE_NAME`
-    1. `find . -type f -exec sed -i "" 's/go-template/service-name/g' {} \;`
-    1. `find . -type f -exec sed -i "" 's/GO_TEMPLATE/SERVICE_NAME/g' {} \;`
+    1. `find . -maxdepth 3 -type f -exec sed -i "" 's/go-template/service-name/g' {} \;`
+    1. `find . -maxdepth 3 -type f -exec sed -i "" 's/GO_TEMPLATE/SERVICE_NAME/g' {} \;`
