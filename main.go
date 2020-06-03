@@ -58,14 +58,14 @@ func main() {
 
 	log = log.WithField("environment", cfg.EnvName)
 
-	// Start eventbus consumer
-	if err := d.EventBusService.StartConsumers(); err != nil {
-		log.WithError(err).Fatal("Unable to start eventbus consumers")
+	// Start isb consumer
+	if err := d.ISBService.StartConsumers(); err != nil {
+		log.WithError(err).Fatal("Unable to start isb consumers")
 	}
 
-	// Start inbound consumer
-	if err := d.InboundService.StartConsumers(); err != nil {
-		log.WithError(err).Fatal("Unable to start inbound consumers")
+	// Start hsb publishers
+	if err := d.HSBService.StartPublishers(); err != nil {
+		log.WithError(err).Fatal("Unable to start hsb consumers")
 	}
 
 	// Start API server

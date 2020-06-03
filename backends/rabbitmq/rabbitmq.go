@@ -1,4 +1,4 @@
-// Generic rabbitmq backend used for both internal event consumption and inbound
+// Generic rabbitmq backend used for both internal event consumption and hsb
 // message publishing.
 package rabbitmq
 
