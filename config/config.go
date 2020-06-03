@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -18,20 +19,18 @@ type Config struct {
 	NewRelicLicense string `envconfig:"NEW_RELIC_LICENSE"`
 
 	// Queue for _internal_ events
-	EventBusRabbitURL          string `envconfig:"EVENT_BUS_RABBIT_URL" default:"amqp://localhost"`
-	EventBusRabbitExchangeName string `envconfig:"EVENT_BUS_RABBIT_EXCHANGE_NAME" default:"events"`
-	EventBusRabbitRoutingKey   string `envconfig:"EVENT_BUS_RABBIT_ROUTING_KEY" default:"messages.collect.go-template"`
-	EventBusRabbitQueueName    string `envconfig:"EVENT_BUS_RABBIT_QUEUE_NAME" default:"events"`
-	EventBusRabbitNumConsumers int    `envconfig:"EVENT_BUS_RABBIT_NUM_CONSUMERS" default:"10"`
+	ISBURL          string `envconfig:"ISB_URL" default:"amqp://localhost"`
+	ISBExchangeName string `envconfig:"ISB_EXCHANGE_NAME" default:"events"`
+	ISBRoutingKey   string `envconfig:"ISB_ROUTING_KEY" default:"messages.collect.go-template"`
+	ISBQueueName    string `envconfig:"ISB_QUEUE_NAME" default:"events"`
+	ISBNumConsumers int    `envconfig:"ISB_NUM_CONSUMERS" default:"10"`
 
-	// Queue for inbound messages
-	InboundRabbitURL              string `envconfig:"INBOUND_RABBIT_URL" default:"amqp://localhost"`
-	InboundRabbitExchangeName     string `envconfig:"INBOUND_RABBIT_EXCHANGE_NAME" default:"inbound"`
-	InboundRabbitRoutingKey       string `envconfig:"INBOUND_RABBIT_ROUTING_KEY" default:"inbound"`
-	InboundRabbitQueueName        string `envconfig:"INBOUND_RABBIT_QUEUE_NAME" default:"inbound"`
-	InboundRabbitNumConsumers     int    `envconfig:"INBOUND_RABBIT_NUM_CONSUMERS" default:"10"`
-	InboundRabbitQosPrefetchCount int    `envconfig:"INBOUND_RABBIT_QOS_PREFETCH_COUNT" default:"0"`
-	InboundRabbitQosPrefetchSize  int    `envconfig:"INBOUND_RABBIT_QOS_PREFETCH_SIZE" default:"0"`
+	// Queue for hsb messages
+	HSBBrokerURLs     []string      `envconfig:"HSB_BROKER_URLS" default:"localhost:9092"`
+	HSBTopicName      string        `envconfig:"HSB_TOPIC_NAME" default:"hsb"`
+	HSBNumPublishers  int           `envconfig:"HSB_NUM_PUBLISHERS" default:"10"`
+	HSBConnectTimeout time.Duration `envconfig:"HSB_CONNECT_TIMEOUT" default:"10s"`
+	HSBBatchSize      int           `envconfig:"HSB_BATCH_SIZE" default:"1"`
 }
 
 func New() *Config {

@@ -8,16 +8,18 @@ import (
 
 	"github.com/InVisionApp/go-health"
 	gllogrus "github.com/InVisionApp/go-logger/shims/logrus"
+	"github.com/batchcorp/schemas/build/go/events"
 	newrelic "github.com/newrelic/go-agent"
 	"github.com/newrelic/go-agent/_integrations/nrlogrus"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 
+	"github.com/batchcorp/go-template/backends/kafka"
 	"github.com/batchcorp/go-template/backends/rabbitmq"
 	"github.com/batchcorp/go-template/config"
-	"github.com/batchcorp/go-template/services/eventbus"
-	"github.com/batchcorp/go-template/services/inbound"
+	"github.com/batchcorp/go-template/services/hsb"
+	"github.com/batchcorp/go-template/services/isb"
 )
 
 const (
@@ -28,12 +30,14 @@ type customCheck struct{}
 
 type Dependencies struct {
 	// Backends
-	EventBusRabbitBackend rabbitmq.IRabbitMQ
-	InboundRabbitBackend  rabbitmq.IRabbitMQ
+	ISBBackend rabbitmq.IRabbitMQ
+	HSBBackend kafka.IKafka
 
 	// Services
-	EventBusService eventbus.IEventBus
-	InboundService  inbound.IInbound
+	ISBService isb.IISB
+	HSBService hsb.IHSB
+
+	HSBChan chan *events.Manifest
 
 	Health         health.IHealth
 	DefaultContext context.Context
@@ -47,6 +51,7 @@ func New(cfg *config.Config) (*Dependencies, error) {
 	d := &Dependencies{
 		Health:         gohealth,
 		DefaultContext: context.Background(),
+		HSBChan:        make(chan *events.Manifest, 0),
 	}
 
 	if err := d.setupNR(cfg); err != nil {
@@ -95,11 +100,11 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	// Events rabbitmq backend
 	eventsRabbit, err := rabbitmq.New(
 		&rabbitmq.Options{
-			URL:          cfg.EventBusRabbitURL,
+			URL:          cfg.ISBURL,
 			ExchangeType: amqp.ExchangeTopic,
-			ExchangeName: cfg.EventBusRabbitExchangeName,
-			RoutingKey:   cfg.EventBusRabbitRoutingKey,
-			QueueName:    cfg.EventBusRabbitQueueName,
+			ExchangeName: cfg.ISBExchangeName,
+			RoutingKey:   cfg.ISBRoutingKey,
+			QueueName:    cfg.ISBQueueName,
 		},
 		d.DefaultContext,
 	)
@@ -107,51 +112,49 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		return errors.Wrap(err, "unable to create new events rabbit instance")
 	}
 
-	d.EventBusRabbitBackend = eventsRabbit
+	d.ISBBackend = eventsRabbit
 
-	// InboundService rabbit backend
-	inboundRabbit, err := rabbitmq.New(
-		&rabbitmq.Options{
-			URL:              cfg.InboundRabbitURL,
-			ExchangeType:     amqp.ExchangeDirect,
-			ExchangeName:     cfg.InboundRabbitExchangeName,
-			RoutingKey:       cfg.InboundRabbitRoutingKey,
-			QueueName:        cfg.InboundRabbitQueueName,
-			QosPrefetchCount: cfg.InboundRabbitQosPrefetchCount,
-			QosPrefetchSize:  cfg.InboundRabbitQosPrefetchSize,
+	hsb, err := kafka.New(
+		&kafka.Options{
+			Topic:     cfg.HSBTopicName,
+			Brokers:   cfg.HSBBrokerURLs,
+			Timeout:   cfg.HSBConnectTimeout,
+			BatchSize: cfg.HSBBatchSize,
 		},
-		d.DefaultContext)
+		d.DefaultContext,
+	)
 	if err != nil {
-		return errors.Wrap(err, "unable to create new events rabbit instance")
+		return errors.Wrap(err, "unable to create new kafka instance")
 	}
 
-	d.InboundRabbitBackend = inboundRabbit
+	d.HSBBackend = hsb
 
 	return nil
 }
 
 func (d *Dependencies) setupServices(cfg *config.Config) error {
-	e, err := eventbus.New(&eventbus.Config{
-		Rabbit:       d.EventBusRabbitBackend,
+	isb, err := isb.New(&isb.Config{
+		Rabbit:       d.ISBBackend,
 		NRApp:        d.NRApp,
-		NumConsumers: cfg.EventBusRabbitNumConsumers,
+		NumConsumers: cfg.ISBNumConsumers,
 	})
 	if err != nil {
 		return errors.Wrap(err, "unable to setup event")
 	}
 
-	d.EventBusService = e
+	d.ISBService = isb
 
-	i, err := inbound.New(&inbound.Config{
-		Rabbit:       d.InboundRabbitBackend,
-		NRApp:        d.NRApp,
-		NumConsumers: cfg.InboundRabbitNumConsumers,
+	hsb, err := hsb.New(&hsb.Config{
+		Kafka:         d.HSBBackend,
+		NRApp:         d.NRApp,
+		NumPublishers: cfg.HSBNumPublishers,
+		HSBChan:       d.HSBChan,
 	})
 	if err != nil {
-		return errors.Wrap(err, "unable to setup inbound")
+		return errors.Wrap(err, "unable to setup hsb")
 	}
 
-	d.InboundService = i
+	d.HSBService = hsb
 
 	return nil
 }

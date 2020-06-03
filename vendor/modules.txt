@@ -8,6 +8,9 @@ github.com/alecthomas/template
 github.com/alecthomas/template/parse
 # github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
 github.com/alecthomas/units
+# github.com/batchcorp/schemas v0.0.0-20200531185947-e6aa4c5cdeac
+github.com/batchcorp/schemas/build/go/events
+github.com/batchcorp/schemas/build/go/events/records
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
 # github.com/hpcloud/tail v1.0.0
@@ -69,6 +72,9 @@ github.com/onsi/gomega/types
 github.com/pkg/errors
 # github.com/relistan/go-director v0.0.0-20181104164737-5f56787d9731
 github.com/relistan/go-director
+# github.com/segmentio/kafka-go v0.3.6
+github.com/segmentio/kafka-go
+github.com/segmentio/kafka-go/sasl
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
 # github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
