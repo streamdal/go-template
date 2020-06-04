@@ -12,11 +12,18 @@ const (
 )
 
 type Config struct {
-	ListenAddress   string `envconfig:"LISTEN_ADDRESS" default:":8282"`
-	HealthFreqSec   int    `envconfig:"HEALTH_FREQ_SEC" default:"60"`
-	EnvName         string `envconfig:"ENV_NAME" default:"local"`
-	ServiceName     string `envconfig:"SERVICE_NAME" default:"go-template"`
-	NewRelicLicense string `envconfig:"NEW_RELIC_LICENSE"`
+	ListenAddress          string   `envconfig:"LISTEN_ADDRESS" default:":8282"`
+	HealthFreqSec          int      `envconfig:"HEALTH_FREQ_SEC" default:"60"`
+	EnvName                string   `envconfig:"ENV_NAME" default:"local"`
+	BadgerDirectory        string   `envconfig:"BADGER_DIRECTORY" default:"./backend-data/badger"`
+	ServiceName            string   `envconfig:"SERVICE_NAME" default:"go-template"`
+	EtcdEndpoints          []string `envconfig:"ETCD_ENDPOINTS"default:"localhost:2379"`
+	EtcdDialTimeoutSeconds int      `envconfig:"ETCD_DIAL_TIMEOUT_SECONDS" default:"5"`
+	EtcdTLSEnabled         bool     `envconfig:"ETCD_TLS_ENABLED" default:"false"`
+	EtcdTLSCACert          string   `envconfig:"ETCD_TLS_CA_CERT"`
+	EtcdTLSClientCert      string   `envconfig:"ETCD_TLS_CLIENT_CERT"`
+	EtcdTLSClientKey       string   `envconfig:"ETCD_TLS_CLIENT_KEY"`
+	NewRelicLicense        string   `envconfig:"NEW_RELIC_LICENSE"`
 
 	// Queue for _internal_ events
 	ISBURL          string `envconfig:"ISB_URL" default:"amqp://localhost"`
