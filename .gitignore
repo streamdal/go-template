@@ -1,2 +1,2 @@
 .env
-backend-data/rabbitmq
+backend-data/*
