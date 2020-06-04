@@ -2,6 +2,8 @@ package deps
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"time"
@@ -15,6 +17,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 
+	"github.com/batchcorp/go-template/backends/badger"
+	"github.com/batchcorp/go-template/backends/etcd"
 	"github.com/batchcorp/go-template/backends/kafka"
 	"github.com/batchcorp/go-template/backends/rabbitmq"
 	"github.com/batchcorp/go-template/config"
@@ -30,8 +34,10 @@ type customCheck struct{}
 
 type Dependencies struct {
 	// Backends
-	ISBBackend rabbitmq.IRabbitMQ
-	HSBBackend kafka.IKafka
+	BadgerBackend badger.IBadger
+	EtcdBackend   etcd.IEtcd
+	ISBBackend    rabbitmq.IRabbitMQ
+	HSBBackend    kafka.IKafka
 
 	// Services
 	ISBService isb.IISB
@@ -129,6 +135,37 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 
 	d.HSBBackend = hsb
 
+	// BadgerBackend k/v store
+	b, err := badger.New(cfg.BadgerDirectory, d.DefaultContext)
+	if err != nil {
+		return errors.Wrap(err, "unable to create new badger instance")
+	}
+
+	d.BadgerBackend = b
+
+	// etcd
+	var tlsConfig *tls.Config
+
+	if cfg.EtcdTLSEnabled {
+		var err error
+
+		tlsConfig, err = createTLSConfig(cfg.EtcdTLSCACert, cfg.EtcdTLSClientCert, cfg.EtcdTLSClientKey)
+		if err != nil {
+			return errors.Wrap(err, "unable to create TLS config for etcd")
+		}
+	}
+
+	e, err := etcd.New(&etcd.Options{
+		Endpoints:   cfg.EtcdEndpoints,
+		DialTimeout: time.Duration(cfg.EtcdDialTimeoutSeconds) * time.Second,
+		TLS:         tlsConfig,
+	})
+	if err != nil {
+		return errors.Wrap(err, "unable to create etcd instance")
+	}
+
+	d.EtcdBackend = e
+
 	return nil
 }
 
@@ -186,6 +223,21 @@ func (d *Dependencies) setupNR(cfg *config.Config) error {
 	d.NRApp = app
 
 	return nil
+}
+
+func createTLSConfig(caCert, clientCert, clientKey string) (*tls.Config, error) {
+	cert, err := tls.X509KeyPair([]byte(clientCert), []byte(clientKey))
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to load cert + key")
+	}
+
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM([]byte(caCert))
+
+	return &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+	}, nil
 }
 
 // Satisfy the go-health.ICheckable interface

@@ -17,6 +17,17 @@ services:
       - ./backend-data/rabbitmq:/var/lib/rabbitmq
     container_name: rabbitmq
 
+  etcd:
+    image: bitnami/etcd:3
+    ports:
+      - 2379:2379
+      - 2380:2380
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+    volumes:
+      - ./backend-data/etcd:/bitnami
+    container_name: etcd
+
   kafka:
     image: obsidiandynamics/kafka
     restart: "no"
