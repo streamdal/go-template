@@ -120,12 +120,17 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 
 	d.ISBBackend = eventsRabbit
 
+	if cfg.HSBUseTLS {
+		logrus.Debug("using TLS for HSB")
+	}
+
 	hsb, err := kafka.New(
 		&kafka.Options{
 			Topic:     cfg.HSBTopicName,
 			Brokers:   cfg.HSBBrokerURLs,
 			Timeout:   cfg.HSBConnectTimeout,
 			BatchSize: cfg.HSBBatchSize,
+			UseTLS:    cfg.HSBUseTLS,
 		},
 		d.DefaultContext,
 	)

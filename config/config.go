@@ -34,6 +34,7 @@ type Config struct {
 
 	// Queue for hsb messages
 	HSBBrokerURLs     []string      `envconfig:"HSB_BROKER_URLS" default:"localhost:9092"`
+	HSBUseTLS         bool          `envconfig:"HSB_USE_TLS" default:"false"`
 	HSBTopicName      string        `envconfig:"HSB_TOPIC_NAME" default:"hsb"`
 	HSBNumPublishers  int           `envconfig:"HSB_NUM_PUBLISHERS" default:"10"`
 	HSBConnectTimeout time.Duration `envconfig:"HSB_CONNECT_TIMEOUT" default:"10s"`
