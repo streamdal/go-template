@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"math/rand"
 	"time"
@@ -31,6 +32,7 @@ type Options struct {
 	Brokers   []string
 	Timeout   time.Duration
 	BatchSize int
+	UseTLS    bool
 }
 
 func New(opts *Options, ctx context.Context) (*Kafka, error) {
@@ -44,6 +46,12 @@ func New(opts *Options, ctx context.Context) (*Kafka, error) {
 
 	dialer := &kafka.Dialer{
 		Timeout: opts.Timeout,
+	}
+
+	if opts.UseTLS {
+		dialer.TLS = &tls.Config{
+			InsecureSkipVerify: true,
+		}
 	}
 
 	if _, err := dialer.DialContext(ctx, "tcp", opts.Brokers[0]); err != nil {
