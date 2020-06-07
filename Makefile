@@ -101,3 +101,19 @@ docker/push: description = Push local docker image
 docker/push:
 	docker push docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):$(VERSION) && \
 	docker push docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):latest
+
+### Deploy
+.PHONY: kube/deploy
+kube/deploy: description = Deploy image to kubernetes cluster
+kube/deploy:
+	cat deploy.dev.yaml | sed "s/{{VERSION}}/$(VERSION)/g" | kubectl apply -f -
+
+.PHONY: kube/delete
+kube/delete: description = Delete deployment from cluster
+kube/delete:
+	kubectl delete -f deploy.dev.yaml
+
+.PHONY: kube/logs
+kube/logs: description = Get pod logs
+kube/logs:
+	kubectl logs -l app=$(SERVICE)

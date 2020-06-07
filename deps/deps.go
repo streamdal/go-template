@@ -151,7 +151,7 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	// etcd
 	var tlsConfig *tls.Config
 
-	if cfg.EtcdTLSEnabled {
+	if cfg.EtcdUseTLS {
 		var err error
 
 		tlsConfig, err = createTLSConfig(cfg.EtcdTLSCACert, cfg.EtcdTLSClientCert, cfg.EtcdTLSClientKey)
