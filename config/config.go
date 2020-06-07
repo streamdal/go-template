@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -19,7 +20,7 @@ type Config struct {
 	ServiceName            string   `envconfig:"SERVICE_NAME" default:"go-template"`
 	EtcdEndpoints          []string `envconfig:"ETCD_ENDPOINTS"default:"localhost:2379"`
 	EtcdDialTimeoutSeconds int      `envconfig:"ETCD_DIAL_TIMEOUT_SECONDS" default:"5"`
-	EtcdTLSEnabled         bool     `envconfig:"ETCD_TLS_ENABLED" default:"false"`
+	EtcdUseTLS             bool     `envconfig:"ETCD_USE_TLS" default:"false"`
 	EtcdTLSCACert          string   `envconfig:"ETCD_TLS_CA_CERT"`
 	EtcdTLSClientCert      string   `envconfig:"ETCD_TLS_CLIENT_CERT"`
 	EtcdTLSClientKey       string   `envconfig:"ETCD_TLS_CLIENT_KEY"`
@@ -48,6 +49,20 @@ func New() *Config {
 func (c *Config) LoadEnvVars() error {
 	if err := envconfig.Process(EnvConfigPrefix, c); err != nil {
 		return fmt.Errorf("unable to fetch env vars: %s", err)
+	}
+
+	if c.EtcdUseTLS {
+		if c.EtcdTLSCACert == "" {
+			return errors.New("ETCD_TLS_CA_CERT must be set when ETCD_USE_TLS set to true")
+		}
+
+		if c.EtcdTLSClientCert == "" {
+			return errors.New("ETCD_TLS_CLIENT_CERT must be set when ETCD_USE_TLS set to true")
+		}
+
+		if c.EtcdTLSClientKey == "" {
+			return errors.New("ETCD_TLS_CLIENT_KEY must be set when ETCD_USE_TLS set to true")
+		}
 	}
 
 	return nil
