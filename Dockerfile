@@ -24,6 +24,8 @@ RUN apk --update add bash curl ca-certificates && update-ca-certificates
 # Install binary
 COPY --from=builder /build/go-template-linux /go-template-linux
 
+RUN mkdir -p /backend-data/badger
+
 EXPOSE 8080
 
 CMD ["/go-template-linuux", "-d"]
