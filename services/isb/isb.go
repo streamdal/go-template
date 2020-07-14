@@ -86,7 +86,7 @@ func (i *ISB) ConsumeFunc(msg amqp.Delivery) error {
 
 	switch pbMessage.Type {
 	default:
-		i.log.Debug("got an internal message: %+v", pbMessage)
+		i.log.Debugf("got an internal message: %+v", pbMessage)
 	}
 
 	return nil

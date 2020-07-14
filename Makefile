@@ -74,7 +74,7 @@ clean:
 test: description = Run Go unit tests
 test: GOFLAGS=
 test:
-	$(GO) test ./...1
+	$(GO) test ./...
 
 .PHONY: testv
 testv: description = Run Go unit tests (verbose)

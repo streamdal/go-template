@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -24,12 +26,14 @@ var _ = Describe("Config", func() {
 	})
 
 	Describe("LoadEnvVars", func() {
-		Context("when no ENV vars are properly set", func() {
-			It("should return an error about the unset vars", func() {
+		Context("when TLS is enabled but TLS vars are empty", func() {
+			It("should return an error", func() {
+				os.Setenv("ETCD_USE_TLS", "true")
+
 				err := cfg.LoadEnvVars()
 
 				Expect(err).ToNot(BeNil())
-				Expect(err.Error()).To(ContainSubstring("Unable to fetch env vars: required key LISTEN_ADDRESS missing value"))
+				Expect(err.Error()).To(ContainSubstring("must be set when ETCD_USE_TLS set to true"))
 			})
 		})
 	})
