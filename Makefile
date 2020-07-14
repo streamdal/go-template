@@ -102,16 +102,22 @@ docker/push:
 	docker push docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):$(VERSION) && \
 	docker push docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):latest
 
-### Deploy
-.PHONY: kube/deploy
-kube/deploy: description = Deploy image to kubernetes cluster
-kube/deploy:
+### Kube
+
+.PHONY: kube/deploy/dev
+kube/deploy/dev: description = Deploy image to kubernetes cluster
+kube/deploy/dev:
 	cat deploy.dev.yaml | sed "s/{{VERSION}}/$(VERSION)/g" | kubectl apply -f -
 
+.PHONY: kube/deploy/prod
+kube/deploy/prod: description = Deploy image to kubernetes cluster
+kube/deploy/prod:
+	cat deploy.prod.yaml | sed "s/{{VERSION}}/$(VERSION)/g" | kubectl apply -f -
+
 .PHONY: kube/delete
-kube/delete: description = Delete deployment from cluster
+kube/delete: description = Deletes pods from cluster
 kube/delete:
-	kubectl delete -f deploy.dev.yaml
+	kubectl delete pods -l app=writer
 
 .PHONY: kube/logs
 kube/logs: description = Get pod logs
