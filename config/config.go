@@ -27,11 +27,12 @@ type Config struct {
 	NewRelicLicense        string   `envconfig:"NEW_RELIC_LICENSE"`
 
 	// Queue for _internal_ events
-	ISBURL          string `envconfig:"ISB_URL" default:"amqp://localhost"`
-	ISBExchangeName string `envconfig:"ISB_EXCHANGE_NAME" default:"events"`
-	ISBRoutingKey   string `envconfig:"ISB_ROUTING_KEY" default:"messages.collect.go-template"`
-	ISBQueueName    string `envconfig:"ISB_QUEUE_NAME" default:"events"`
-	ISBNumConsumers int    `envconfig:"ISB_NUM_CONSUMERS" default:"10"`
+	ISBURL               string `envconfig:"ISB_URL" default:"amqp://localhost"`
+	ISBExchangeName      string `envconfig:"ISB_EXCHANGE_NAME" default:"events"`
+	ISBRoutingKey        string `envconfig:"ISB_ROUTING_KEY" default:"messages.collect.go-template"`
+	ISBQueueName         string `envconfig:"ISB_QUEUE_NAME" default:"events"`
+	ISBNumConsumers      int    `envconfig:"ISB_NUM_CONSUMERS" default:"10"`
+	ISBRetryReconnectSec int    `envconfig:"ISB_RETRY_RECONNECT_SEC" default:"10"`
 
 	// Queue for hsb messages
 	HSBBrokerURLs     []string      `envconfig:"HSB_BROKER_URLS" default:"localhost:9092"`

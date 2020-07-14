@@ -106,11 +106,12 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	// Events rabbitmq backend
 	eventsRabbit, err := rabbitmq.New(
 		&rabbitmq.Options{
-			URL:          cfg.ISBURL,
-			ExchangeType: amqp.ExchangeTopic,
-			ExchangeName: cfg.ISBExchangeName,
-			RoutingKey:   cfg.ISBRoutingKey,
-			QueueName:    cfg.ISBQueueName,
+			URL:               cfg.ISBURL,
+			ExchangeType:      amqp.ExchangeTopic,
+			ExchangeName:      cfg.ISBExchangeName,
+			RoutingKey:        cfg.ISBRoutingKey,
+			QueueName:         cfg.ISBQueueName,
+			RetryReconnectSec: cfg.ISBRetryReconnectSec,
 		},
 		d.DefaultContext,
 	)
@@ -124,7 +125,7 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		logrus.Debug("using TLS for HSB")
 	}
 
-	hsb, err := kafka.New(
+	hsbBackend, err := kafka.New(
 		&kafka.Options{
 			Topic:     cfg.HSBTopicName,
 			Brokers:   cfg.HSBBrokerURLs,
@@ -138,7 +139,7 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		return errors.Wrap(err, "unable to create new kafka instance")
 	}
 
-	d.HSBBackend = hsb
+	d.HSBBackend = hsbBackend
 
 	// BadgerBackend k/v store
 	b, err := badger.New(cfg.BadgerDirectory, d.DefaultContext)
@@ -175,7 +176,7 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 }
 
 func (d *Dependencies) setupServices(cfg *config.Config) error {
-	isb, err := isb.New(&isb.Config{
+	isbService, err := isb.New(&isb.Config{
 		Rabbit:       d.ISBBackend,
 		NRApp:        d.NRApp,
 		NumConsumers: cfg.ISBNumConsumers,
@@ -184,9 +185,9 @@ func (d *Dependencies) setupServices(cfg *config.Config) error {
 		return errors.Wrap(err, "unable to setup event")
 	}
 
-	d.ISBService = isb
+	d.ISBService = isbService
 
-	hsb, err := hsb.New(&hsb.Config{
+	hsbService, err := hsb.New(&hsb.Config{
 		Kafka:         d.HSBBackend,
 		NRApp:         d.NRApp,
 		NumPublishers: cfg.HSBNumPublishers,
@@ -196,7 +197,7 @@ func (d *Dependencies) setupServices(cfg *config.Config) error {
 		return errors.Wrap(err, "unable to setup hsb")
 	}
 
-	d.HSBService = hsb
+	d.HSBService = hsbService
 
 	return nil
 }
