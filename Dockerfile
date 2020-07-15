@@ -28,4 +28,4 @@ RUN mkdir -p /backend-data/badger
 
 EXPOSE 8080
 
-CMD ["/go-template-linuux", "-d"]
+CMD ["/go-template-linux", "-d"]
