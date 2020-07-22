@@ -29,15 +29,18 @@ type Config struct {
 	// Queue for _internal_ events
 	ISBURL               string `envconfig:"ISB_URL" default:"amqp://localhost"`
 	ISBExchangeName      string `envconfig:"ISB_EXCHANGE_NAME" default:"events"`
-	ISBRoutingKey        string `envconfig:"ISB_ROUTING_KEY" default:"messages.collect.go-template"`
-	ISBQueueName         string `envconfig:"ISB_QUEUE_NAME" default:"events"`
+	ISBRoutingKey        string `envconfig:"ISB_ROUTING_KEY" default:"messages.collect.#"`
+	ISBQueueName         string `envconfig:"ISB_QUEUE_NAME" default:""`
 	ISBNumConsumers      int    `envconfig:"ISB_NUM_CONSUMERS" default:"10"`
 	ISBRetryReconnectSec int    `envconfig:"ISB_RETRY_RECONNECT_SEC" default:"10"`
+	ISBQueueDurable      bool   `envconfig:"ISB_QUEUE_DURABLE" default:"false"`
+	ISBQueueExclusive    bool   `envconfig:"ISB_QUEUE_EXCLUSIVE" default:"true"`
+	ISBQueueAutoDelete   bool   `envconfig:"ISB_QUEUE_AUTO_DELETE" default:"true"`
 
 	// Queue for hsb messages
 	HSBBrokerURLs     []string      `envconfig:"HSB_BROKER_URLS" default:"localhost:9092"`
 	HSBUseTLS         bool          `envconfig:"HSB_USE_TLS" default:"false"`
-	HSBTopicName      string        `envconfig:"HSB_TOPIC_NAME" default:"hsb"`
+	HSBTopicName      string        `envconfig:"HSB_TOPIC_NAME" default:"inbound"`
 	HSBNumPublishers  int           `envconfig:"HSB_NUM_PUBLISHERS" default:"10"`
 	HSBConnectTimeout time.Duration `envconfig:"HSB_CONNECT_TIMEOUT" default:"10s"`
 	HSBBatchSize      int           `envconfig:"HSB_BATCH_SIZE" default:"1"`
