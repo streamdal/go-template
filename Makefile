@@ -125,3 +125,8 @@ kube/delete:
 kube/logs: description = Get pod logs
 kube/logs:
 	kubectl logs -l app=$(SERVICE)
+
+.PHONY: kube/logsf
+kube/logsf: description = Get pod logs
+kube/logsf:
+	kubectl logs -l app=$(SERVICE)

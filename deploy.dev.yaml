@@ -1,0 +1,51 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-template-deployment
+spec:
+  selector:
+    matchLabels:
+      app: go-template
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  minReadySeconds: 5
+  template:
+    metadata:
+      labels:
+        app: go-template
+    spec:
+      containers:
+        - name: go-template
+          image: docker.pkg.github.com/batchcorp/go-template/go-template:{{VERSION}}
+          ports:
+            - containerPort: 8282
+          env:
+            - name: ENV_NAME
+              value: "dev"
+            - name: DEBUG
+              value: "true"
+            - name: NEW_RELIC_LICENSE
+              valueFrom:
+                secretKeyRef:
+                  name: newrelic
+                  key: license
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health-check
+              port: 8282
+            initialDelaySeconds: 30
+            periodSeconds: 5
+      imagePullSecrets:
+        - name: regcred

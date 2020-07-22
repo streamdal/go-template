@@ -112,6 +112,9 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 			RoutingKey:        cfg.ISBRoutingKey,
 			QueueName:         cfg.ISBQueueName,
 			RetryReconnectSec: cfg.ISBRetryReconnectSec,
+			QueueDurable:      cfg.ISBQueueDurable,
+			QueueExclusive:    cfg.ISBQueueExclusive,
+			QueueAutoDelete:   cfg.ISBQueueAutoDelete,
 		},
 		d.DefaultContext,
 	)

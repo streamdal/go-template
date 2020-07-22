@@ -49,6 +49,9 @@ type Options struct {
 	QosPrefetchCount  int
 	QosPrefetchSize   int
 	RetryReconnectSec int
+	QueueDurable      bool
+	QueueExclusive    bool
+	QueueAutoDelete   bool
 }
 
 func New(opts *Options, ctx context.Context) (*RabbitMQ, error) {
@@ -227,9 +230,9 @@ func (r *RabbitMQ) newServerChannel() (*amqp.Channel, error) {
 
 	if _, err := ch.QueueDeclare(
 		r.Options.QueueName,
-		true,
-		false,
-		false,
+		r.Options.QueueDurable,
+		r.Options.QueueAutoDelete,
+		r.Options.QueueExclusive,
 		false,
 		nil,
 	); err != nil {
@@ -258,7 +261,7 @@ func (r *RabbitMQ) newConsumerChannels() error {
 	deliveryChannel, err := serverChannel.Consume(r.Options.QueueName,
 		"",
 		false,
-		false,
+		r.Options.QueueExclusive,
 		false,
 		false,
 		nil,
