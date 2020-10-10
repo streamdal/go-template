@@ -1,16 +1,16 @@
 package isb
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/batchcorp/rabbit"
 	"github.com/batchcorp/schemas/build/go/events"
 	"github.com/golang/protobuf/proto"
 	newrelic "github.com/newrelic/go-agent"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
-
-	"github.com/batchcorp/go-template/backends/rabbitmq"
 )
 
 const (
@@ -29,7 +29,7 @@ type ISB struct {
 }
 
 type Config struct {
-	Rabbit       rabbitmq.IRabbitMQ
+	Rabbit       rabbit.IRabbit
 	NRApp        newrelic.Application
 	NumConsumers int
 }
@@ -53,7 +53,7 @@ func (i *ISB) StartConsumers() error {
 	i.log.Debugf("Launching '%d' event consumers", i.NumConsumers)
 
 	for n := 0; n < i.NumConsumers; n++ {
-		go i.Rabbit.ConsumeAndRun(i.ConsumeFunc)
+		go i.Rabbit.Consume(context.Background(), nil, i.ConsumeFunc)
 	}
 
 	return nil
