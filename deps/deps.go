@@ -10,6 +10,7 @@ import (
 
 	"github.com/InVisionApp/go-health"
 	gllogrus "github.com/InVisionApp/go-logger/shims/logrus"
+	"github.com/batchcorp/rabbit"
 	"github.com/batchcorp/schemas/build/go/events"
 	newrelic "github.com/newrelic/go-agent"
 	"github.com/newrelic/go-agent/_integrations/nrlogrus"
@@ -20,7 +21,6 @@ import (
 	"github.com/batchcorp/go-template/backends/badger"
 	"github.com/batchcorp/go-template/backends/etcd"
 	"github.com/batchcorp/go-template/backends/kafka"
-	"github.com/batchcorp/go-template/backends/rabbitmq"
 	"github.com/batchcorp/go-template/config"
 	"github.com/batchcorp/go-template/services/hsb"
 	"github.com/batchcorp/go-template/services/isb"
@@ -36,7 +36,7 @@ type Dependencies struct {
 	// Backends
 	BadgerBackend badger.IBadger
 	EtcdBackend   etcd.IEtcd
-	ISBBackend    rabbitmq.IRabbitMQ
+	ISBBackend    rabbit.IRabbit
 	HSBBackend    kafka.IKafka
 
 	// Services
@@ -104,25 +104,26 @@ func (d *Dependencies) setupHealthChecks() error {
 
 func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	// Events rabbitmq backend
-	eventsRabbit, err := rabbitmq.New(
-		&rabbitmq.Options{
-			URL:               cfg.ISBURL,
-			ExchangeType:      amqp.ExchangeTopic,
-			ExchangeName:      cfg.ISBExchangeName,
-			RoutingKey:        cfg.ISBRoutingKey,
-			QueueName:         cfg.ISBQueueName,
-			RetryReconnectSec: cfg.ISBRetryReconnectSec,
-			QueueDurable:      cfg.ISBQueueDurable,
-			QueueExclusive:    cfg.ISBQueueExclusive,
-			QueueAutoDelete:   cfg.ISBQueueAutoDelete,
-		},
-		d.DefaultContext,
-	)
+	isbBackend, err := rabbit.New(&rabbit.Options{
+		URL:               cfg.ISBURL,
+		Mode:              0,
+		QueueName:         cfg.ISBQueueName,
+		ExchangeName:      cfg.ISBExchangeName,
+		ExchangeType:      amqp.ExchangeTopic,
+		ExchangeDeclare:   cfg.ISBExchangeDeclare,
+		RoutingKey:        cfg.ISBRoutingKey,
+		RetryReconnectSec: rabbit.DefaultRetryReconnectSec,
+		QueueDurable:      cfg.ISBQueueDurable,
+		QueueExclusive:    cfg.ISBQueueExclusive,
+		QueueAutoDelete:   cfg.ISBQueueAutoDelete,
+		QueueDeclare:      cfg.ISBQueueDeclare,
+		AutoAck:           cfg.ISBAutoAck,
+	})
 	if err != nil {
-		return errors.Wrap(err, "unable to create new events rabbit instance")
+		return errors.Wrap(err, "unable to create new rabbit backend")
 	}
 
-	d.ISBBackend = eventsRabbit
+	d.ISBBackend = isbBackend
 
 	if cfg.HSBUseTLS {
 		logrus.Debug("using TLS for HSB")

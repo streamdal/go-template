@@ -29,10 +29,13 @@ type Config struct {
 	// Queue for _internal_ events
 	ISBURL               string `envconfig:"ISB_URL" default:"amqp://localhost"`
 	ISBExchangeName      string `envconfig:"ISB_EXCHANGE_NAME" default:"events"`
+	ISBExchangeDeclare   bool   `envconfig:"ISB_EXCHANGE_DECLARE" default:"true"`
 	ISBRoutingKey        string `envconfig:"ISB_ROUTING_KEY" default:"messages.collect.#"`
 	ISBQueueName         string `envconfig:"ISB_QUEUE_NAME" default:""`
 	ISBNumConsumers      int    `envconfig:"ISB_NUM_CONSUMERS" default:"10"`
 	ISBRetryReconnectSec int    `envconfig:"ISB_RETRY_RECONNECT_SEC" default:"10"`
+	ISBAutoAck           bool   `envconfig:"ISB_AUTO_ACK" default:"false"`
+	ISBQueueDeclare      bool   `envconfig:"ISB_QUEUE_DECLARE" default:"true"`
 	ISBQueueDurable      bool   `envconfig:"ISB_QUEUE_DURABLE" default:"false"`
 	ISBQueueExclusive    bool   `envconfig:"ISB_QUEUE_EXCLUSIVE" default:"true"`
 	ISBQueueAutoDelete   bool   `envconfig:"ISB_QUEUE_AUTO_DELETE" default:"true"`
