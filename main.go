@@ -6,6 +6,8 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh/terminal"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	"gopkg.in/DataDog/dd-trace-go.v1/profiler"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/batchcorp/go-template/api"
@@ -29,6 +31,15 @@ func init() {
 }
 
 func main() {
+	// Start DataDog tracer
+	tracer.Start(tracer.WithAnalytics(true))
+	defer tracer.Stop()
+	if err := profiler.Start(); err != nil {
+		logrus.Error("Unable to start datadog profiler")
+	} else {
+		defer profiler.Stop()
+	}
+
 	if *debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	}

@@ -24,7 +24,6 @@ type Config struct {
 	EtcdTLSCACert          string   `envconfig:"ETCD_TLS_CA_CERT"`
 	EtcdTLSClientCert      string   `envconfig:"ETCD_TLS_CLIENT_CERT"`
 	EtcdTLSClientKey       string   `envconfig:"ETCD_TLS_CLIENT_KEY"`
-	NewRelicLicense        string   `envconfig:"NEW_RELIC_LICENSE"`
 
 	// Queue for _internal_ events
 	ISBURL               string `envconfig:"ISB_URL" default:"amqp://localhost"`
