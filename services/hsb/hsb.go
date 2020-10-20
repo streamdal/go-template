@@ -12,13 +12,13 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
-	newrelic "github.com/newrelic/go-agent"
 	"github.com/pkg/errors"
 	"github.com/relistan/go-director"
 	"github.com/sirupsen/logrus"
 
-	"github.com/batchcorp/go-template/backends/kafka"
 	"github.com/batchcorp/schemas/build/go/events"
+
+	"github.com/batchcorp/go-template/backends/kafka"
 )
 
 const (
@@ -41,7 +41,6 @@ type Config struct {
 	Kafka         kafka.IKafka
 	Context       context.Context
 	HSBChan       chan *events.Manifest
-	NRApp         newrelic.Application
 	Looper        *director.FreeLooper
 	NumPublishers int
 }

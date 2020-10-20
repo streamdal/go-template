@@ -4,16 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/InVisionApp/go-health"
 	gllogrus "github.com/InVisionApp/go-logger/shims/logrus"
 	"github.com/batchcorp/rabbit"
 	"github.com/batchcorp/schemas/build/go/events"
-	newrelic "github.com/newrelic/go-agent"
-	"github.com/newrelic/go-agent/_integrations/nrlogrus"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
@@ -47,7 +43,6 @@ type Dependencies struct {
 
 	Health         health.IHealth
 	DefaultContext context.Context
-	NRApp          newrelic.Application
 }
 
 func New(cfg *config.Config) (*Dependencies, error) {
@@ -58,10 +53,6 @@ func New(cfg *config.Config) (*Dependencies, error) {
 		Health:         gohealth,
 		DefaultContext: context.Background(),
 		HSBChan:        make(chan *events.Manifest, 0),
-	}
-
-	if err := d.setupNR(cfg); err != nil {
-		return nil, errors.Wrap(err, "unable to setup New Relic agent")
 	}
 
 	if err := d.setupHealthChecks(); err != nil {
@@ -182,7 +173,6 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 func (d *Dependencies) setupServices(cfg *config.Config) error {
 	isbService, err := isb.New(&isb.Config{
 		Rabbit:       d.ISBBackend,
-		NRApp:        d.NRApp,
 		NumConsumers: cfg.ISBNumConsumers,
 	})
 	if err != nil {
@@ -193,7 +183,6 @@ func (d *Dependencies) setupServices(cfg *config.Config) error {
 
 	hsbService, err := hsb.New(&hsb.Config{
 		Kafka:         d.HSBBackend,
-		NRApp:         d.NRApp,
 		NumPublishers: cfg.HSBNumPublishers,
 		HSBChan:       d.HSBChan,
 	})
@@ -202,35 +191,6 @@ func (d *Dependencies) setupServices(cfg *config.Config) error {
 	}
 
 	d.HSBService = hsbService
-
-	return nil
-}
-
-func (d *Dependencies) setupNR(cfg *config.Config) error {
-	appName := fmt.Sprintf("%s-%s", cfg.ServiceName, cfg.EnvName)
-
-	nrConfig := newrelic.NewConfig(appName, cfg.NewRelicLicense)
-
-	if cfg.NewRelicLicense == "" {
-		logrus.Info("no license provided; disabling new relic")
-		nrConfig.Enabled = false
-	}
-
-	nrConfig.ErrorCollector.IgnoreStatusCodes = []int{
-		http.StatusNotFound,
-	}
-
-	// Force NR agent to log at INFO level (as its debug logs are very loud)
-	l := logrus.New()
-	l.SetLevel(logrus.InfoLevel)
-	nrConfig.Logger = nrlogrus.Transform(l)
-
-	app, err := newrelic.NewApplication(nrConfig)
-	if err != nil {
-		return err
-	}
-
-	d.NRApp = app
 
 	return nil
 }
