@@ -7,9 +7,6 @@ spec:
   selector:
     matchLabels:
       app: go-template
-      admission.datadoghq.com/enabled: "true"
-      tags.datadoghq.com/env: "dev"
-      tags.datadoghq.com/service: "go-template"
   replicas: 2
   strategy:
     type: RollingUpdate
@@ -21,6 +18,9 @@ spec:
     metadata:
       labels:
         app: go-template
+        admission.datadoghq.com/enabled: "true"
+        tags.datadoghq.com/env: "dev"
+        tags.datadoghq.com/service: "go-template"
     spec:
       containers:
         - name: go-template
