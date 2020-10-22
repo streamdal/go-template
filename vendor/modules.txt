@@ -1,5 +1,7 @@
 # github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9
 github.com/AndreasBriese/bbloom
+# github.com/DataDog/datadog-go v4.0.1+incompatible
+github.com/DataDog/datadog-go/statsd
 # github.com/InVisionApp/go-health v2.1.0+incompatible
 github.com/InVisionApp/go-health
 # github.com/InVisionApp/go-logger v1.0.1
@@ -72,15 +74,6 @@ github.com/joho/godotenv
 github.com/julienschmidt/httprouter
 # github.com/kelseyhightower/envconfig v1.4.0
 github.com/kelseyhightower/envconfig
-# github.com/newrelic/go-agent v3.0.0+incompatible
-github.com/newrelic/go-agent
-github.com/newrelic/go-agent/_integrations/nrlogrus
-github.com/newrelic/go-agent/internal
-github.com/newrelic/go-agent/internal/cat
-github.com/newrelic/go-agent/internal/jsonx
-github.com/newrelic/go-agent/internal/logger
-github.com/newrelic/go-agent/internal/sysinfo
-github.com/newrelic/go-agent/internal/utilization
 # github.com/nxadm/tail v1.4.4
 github.com/nxadm/tail
 github.com/nxadm/tail/ratelimiter
@@ -120,6 +113,8 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
+# github.com/philhofer/fwd v1.0.0
+github.com/philhofer/fwd
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/relistan/go-director v0.0.0-20200406104025-dbbf5d95248d
@@ -131,6 +126,8 @@ github.com/segmentio/kafka-go/sasl
 github.com/sirupsen/logrus
 # github.com/streadway/amqp v1.0.0
 github.com/streadway/amqp
+# github.com/tinylib/msgp v1.1.2
+github.com/tinylib/msgp/msgp
 # go.etcd.io/etcd v3.3.22+incompatible
 go.etcd.io/etcd/clientv3
 # go.uber.org/atomic v1.6.0
@@ -160,6 +157,7 @@ golang.org/x/net/trace
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+golang.org/x/sys/windows/registry
 # golang.org/x/text v0.3.2
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
@@ -181,6 +179,8 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
+# golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
+golang.org/x/time/rate
 # golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
@@ -258,6 +258,18 @@ google.golang.org/protobuf/types/descriptorpb
 google.golang.org/protobuf/types/known/anypb
 google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/timestamppb
+# gopkg.in/DataDog/dd-trace-go.v1 v1.27.1
+gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httputil
+gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter
+gopkg.in/DataDog/dd-trace-go.v1/ddtrace
+gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext
+gopkg.in/DataDog/dd-trace-go.v1/ddtrace/internal
+gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+gopkg.in/DataDog/dd-trace-go.v1/internal
+gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig
+gopkg.in/DataDog/dd-trace-go.v1/internal/log
+gopkg.in/DataDog/dd-trace-go.v1/internal/version
+gopkg.in/DataDog/dd-trace-go.v1/profiler
 # gopkg.in/alecthomas/kingpin.v2 v2.2.6
 gopkg.in/alecthomas/kingpin.v2
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
