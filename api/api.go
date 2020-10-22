@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
 
 	"github.com/batchcorp/go-template/config"

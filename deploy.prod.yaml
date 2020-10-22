@@ -18,6 +18,9 @@ spec:
     metadata:
       labels:
         app: go-template
+        admission.datadoghq.com/enabled: "true"
+        tags.datadoghq.com/env: "prod"
+        tags.datadoghq.com/service: "go-template"
     spec:
       containers:
         - name: go-template
@@ -29,11 +32,22 @@ spec:
               value: "prod"
             - name: DEBUG
               value: "false"
-            - name: NEW_RELIC_LICENSE
+            - name: DD_AGENT_HOST
               valueFrom:
-                secretKeyRef:
-                  name: newrelic
-                  key: license
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_AGENT_APM_PORT
+              value: "8126"
+            - name: DD_SERVICE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/service']
+            - name: DD_VERSION
+              value: {{VERSION}}
+            - name: DD_ENV
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/env']
           resources:
             requests:
               memory: "64Mi"

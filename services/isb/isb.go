@@ -7,7 +7,6 @@ import (
 	"github.com/batchcorp/rabbit"
 	"github.com/batchcorp/schemas/build/go/events"
 	"github.com/golang/protobuf/proto"
-	newrelic "github.com/newrelic/go-agent"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
@@ -30,7 +29,6 @@ type ISB struct {
 
 type Config struct {
 	Rabbit       rabbit.IRabbit
-	NRApp        newrelic.Application
 	NumConsumers int
 }
 
@@ -69,9 +67,6 @@ func validateConfig(cfg *Config) error {
 
 // This method is intended to be passed as a closure into a rabbit ConsumeAndRun
 func (i *ISB) ConsumeFunc(msg amqp.Delivery) error {
-	txn := i.NRApp.StartTransaction("ConsumeFunc", nil, nil)
-	defer txn.End()
-
 	if err := msg.Ack(false); err != nil {
 		i.log.Errorf("Error acknowledging message: %s", err)
 		return nil
