@@ -107,13 +107,13 @@ docker/push:
 .PHONY: kube/deploy/dev
 kube/deploy/dev: description = Deploy image to kubernetes cluster
 kube/deploy/dev:
-	kubectl config current-context | grep dev || (echo "ERROR: Unable to detect dev env"; exit 1) && \
+	aws eks --region us-west-2 update-kubeconfig --name batch-dev-1 && \
 	cat deploy.dev.yaml | sed "s/{{VERSION}}/$(VERSION)/g" | kubectl apply -f -
 
 .PHONY: kube/deploy/prod
 kube/deploy/prod: description = Deploy image to kubernetes cluster
 kube/deploy/prod:
-	kubectl config current-context | grep prod || (echo "ERROR: Unable to detect prod env"; exit 1) && \
+	aws eks --region us-west-2 update-kubeconfig --name batch-prod-1 && \
 	cat deploy.prod.yaml | sed "s/{{VERSION}}/$(VERSION)/g" | kubectl apply -f -
 
 .PHONY: kube/delete
