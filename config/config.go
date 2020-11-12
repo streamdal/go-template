@@ -28,8 +28,8 @@ type Config struct {
 	// Queue for _internal_ events
 	ISBURL               string `envconfig:"ISB_URL" default:"amqp://localhost"`
 	ISBExchangeName      string `envconfig:"ISB_EXCHANGE_NAME" default:"events"`
-	ISBExchangeDeclare   bool   `envconfig:"ISB_EXCHANGE_DECLARE" default:"false"`
-	ISBExchangeDurable   bool   `envconfig:"ISB_EXCHANGE_DURABLE" default:"false"`
+	ISBExchangeDeclare   bool   `envconfig:"ISB_EXCHANGE_DECLARE" default:"true"`
+	ISBExchangeDurable   bool   `envconfig:"ISB_EXCHANGE_DURABLE" default:"true"`
 	ISBRoutingKey        string `envconfig:"ISB_ROUTING_KEY" default:"messages.collect.#"` // UPDATE THIS
 	ISBQueueName         string `envconfig:"ISB_QUEUE_NAME" default:""`                    // UPDATE THIS
 	ISBNumConsumers      int    `envconfig:"ISB_NUM_CONSUMERS" default:"10"`
@@ -47,6 +47,13 @@ type Config struct {
 	HSBNumPublishers  int           `envconfig:"HSB_NUM_PUBLISHERS" default:"10"`
 	HSBConnectTimeout time.Duration `envconfig:"HSB_CONNECT_TIMEOUT" default:"10s"`
 	HSBBatchSize      int           `envconfig:"HSB_BATCH_SIZE" default:"1"`
+
+	// Medium term storage
+	BackendStorageHost string `envconfig:"BACKEND_STORAGE_HOST" default:"localhost"`
+	BackendStorageName string `envconfig:"BACKEND_STORAGE_NAME" default:"go-template"`
+	BackendStoragePort int    `envconfig:"BACKEND_STORAGE_PORT" default:"5432"`
+	BackendStorageUser string `envconfig:"BACKEND_STORAGE_USER" default:"postgres"`
+	BackendStoragePass string `envconfig:"BACKEND_STORAGE_PASS"`
 }
 
 func New() *Config {
