@@ -4,6 +4,8 @@ SERVICE = go-template
 GO = CGO_ENABLED=$(CGO_ENABLED) GOFLAGS=-mod=vendor go
 CGO_ENABLED ?= 0
 GO_BUILD_FLAGS = -ldflags "-X main.version=${VERSION}"
+DATABASE_URL = postgres://postgres:password@localhost:5432/go-template?sslmode=disable
+MIGRATIONS_DIR = ./backends/postgres/migrations
 
 # Utility functions
 check_defined = \
@@ -101,6 +103,44 @@ docker/push: description = Push local docker image
 docker/push:
 	docker push docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):$(VERSION) && \
 	docker push docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):latest
+
+
+### Database Operations
+
+.PHONY: sql/init
+sql/init: description = Create initial DB
+sql/init:
+	dbmate -u $(DATABASE_URL) create
+
+.PHONY: sql/reset
+sql/reset: description = Recreate initial DB
+sql/reset:
+	dbmate -u $(DATABASE_URL) drop
+	@echo -e "\n"
+	dbmate -u $(DATABASE_URL) create
+
+.PHONY: sql/sh
+sql/sh: description = Run psql
+sql/sh:
+	docker exec -it postgres psql -U postgres -d ui_bff
+
+
+### Migration Operations
+
+.PHONY: migrate/create
+migrate/create: description = Create new migration (NAME=migration_name make migrate/create)
+migrate/create:
+	 dbmate -u $(DATABASE_URL) -d $(MIGRATIONS_DIR) new $(NAME)
+
+.PHONY: migrate/up
+migrate/up: description = Runs migrations
+migrate/up:
+	 dbmate -u $(DATABASE_URL) -d $(MIGRATIONS_DIR) --no-dump-schema migrate
+
+.PHONY: migrate/rollback
+migrate/rollback: description = Rollsback previous migration
+migrate/rollback:
+	 dbmate -u $(DATABASE_URL) -d $(MIGRATIONS_DIR) --no-dump-schema migrate rollback
 
 ### Kube
 
