@@ -15,8 +15,10 @@ import (
 	"github.com/streadway/amqp"
 
 	"github.com/batchcorp/go-template/backends/badger"
+	"github.com/batchcorp/go-template/backends/db"
 	"github.com/batchcorp/go-template/backends/etcd"
 	"github.com/batchcorp/go-template/backends/kafka"
+	"github.com/batchcorp/go-template/backends/postgres"
 	"github.com/batchcorp/go-template/config"
 	"github.com/batchcorp/go-template/services/hsb"
 	"github.com/batchcorp/go-template/services/isb"
@@ -34,6 +36,7 @@ type Dependencies struct {
 	EtcdBackend   etcd.IEtcd
 	ISBBackend    rabbit.IRabbit
 	HSBBackend    kafka.IKafka
+	Postgres   *postgres.Postgres
 
 	// Services
 	ISBService isb.IISB
@@ -166,6 +169,22 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	}
 
 	d.EtcdBackend = e
+
+	storage, err := db.New(&db.Options{
+		Host: cfg.BackendStorageHost,
+		Name: cfg.BackendStorageName,
+		User: cfg.BackendStorageUser,
+		Pass: cfg.BackendStoragePass,
+		Port: cfg.BackendStoragePort,
+	})
+
+	if err != nil {
+		return errors.Wrap(err, "unable to create new db instance")
+	}
+
+	pg := postgres.New(storage)
+
+	d.Postgres = pg
 
 	return nil
 }
