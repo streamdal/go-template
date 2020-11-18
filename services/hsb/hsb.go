@@ -1,29 +1,29 @@
-// HSBService pkg is responsible for working with hsb messages.
+// HSBService pkg is responsible for working with inbound messages.
 //
-// The collectorHandler listens for hsb messages and writes them to the
-// HSBChan; the hsb service publishers listen for the messages and in
+// The collectorHandler listens for inbound messages and writes them to the
+// HSBChan; the inbound service publishers listen for the messages and in
 // turn publish them to HSB. At that point, writers pick up the message(s) and
 // write them to long term storage.
 //
+
 package hsb
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/batchcorp/schemas/build/go/events"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/relistan/go-director"
 	"github.com/sirupsen/logrus"
-
-	"github.com/batchcorp/schemas/build/go/events"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 
 	"github.com/batchcorp/go-template/backends/kafka"
 )
 
 const (
 	DefaultNumPublishers = 10
-	Source               = "http-collector"
 )
 
 type IHSB interface {
@@ -82,36 +82,39 @@ func validateConfig(cfg *Config) error {
 	return nil
 }
 
-func (hsb *HSB) StartPublishers() error {
-	hsb.log.Debugf("Launching '%d' HSB publishers", hsb.NumPublishers)
+func (h *HSB) StartPublishers() error {
+	h.log.Debugf("Launching '%d' HSB publishers", h.NumPublishers)
 
-	for n := 0; n < hsb.NumPublishers; n++ {
-		go hsb.Run(fmt.Sprintf("hsb-publisher-%d", n))
+	for n := 0; n < h.NumPublishers; n++ {
+		go h.Run(fmt.Sprintf("inbound-publisher-%d", n))
 	}
 
 	return nil
 }
 
-func (hsb *HSB) Run(id string) {
-	llog := hsb.log.WithField("publisherID", id)
+func (h *HSB) Run(id string) {
+	llog := h.log.WithField("publisherID", id)
 
-	hsb.Looper.Loop(func() error {
+	h.Looper.Loop(func() error {
 		select {
-		case work := <-hsb.HSBChan:
+		case work := <-h.HSBChan:
+			span, ctx := tracer.StartSpanFromContext(context.Background(), "hsb.Run")
+			defer span.Finish()
+
 			data, err := proto.Marshal(work)
 			if err != nil {
 				llog.Errorf("unable to marshal pb message to []byte: %s", err)
 				return nil
 			}
 
-			if err := hsb.Kafka.Publish(nil, data); err != nil {
+			if err := h.Kafka.PublishWithRetry(ctx, work.Context.Collect.XCollectorHsbTopic, data, 3); err != nil {
 				llog.Errorf("unable to publish msg: %s", err)
 				return nil
 			}
-		case <-hsb.Context.Done():
+		case <-h.Context.Done():
 			// We have been asked to stop.
 			llog.Info("publisher stopping")
-			hsb.Looper.Quit()
+			h.Looper.Quit()
 		}
 		return nil
 	})
