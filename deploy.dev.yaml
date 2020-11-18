@@ -43,7 +43,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.labels['tags.datadoghq.com/service']
             - name: DD_VERSION
-              value: {{VERSION}}
+              value: "{{VERSION}}"
             - name: DD_ENV
               valueFrom:
                 fieldRef:
