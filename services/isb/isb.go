@@ -1,15 +1,17 @@
+// This pkg is used for acting on messages received on the isb.
 package isb
 
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/batchcorp/rabbit"
-	"github.com/batchcorp/schemas/build/go/events"
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
+
+	"github.com/batchcorp/go-template/backends/cache"
 )
 
 const (
@@ -17,8 +19,19 @@ const (
 )
 
 type IISB interface {
-	ConsumeFunc(msg amqp.Delivery) error
 	StartConsumers() error
+}
+
+type Config struct {
+	RabbitMap map[string]*RabbitConfig
+	Cache     cache.ICache
+}
+
+type RabbitConfig struct {
+	RabbitInstance rabbit.IRabbit
+	NumConsumers   int
+	Func           string
+	funcReal       func(amqp.Delivery) error // filled out during New()
 }
 
 type ISB struct {
@@ -27,61 +40,67 @@ type ISB struct {
 	log *logrus.Entry
 }
 
-type Config struct {
-	Rabbit       rabbit.IRabbit
-	NumConsumers int
-}
-
 func New(cfg *Config) (*ISB, error) {
-	if err := validateConfig(cfg); err != nil {
+	// We have to instantiate this because validateConfig needs access to our instance
+	i := &ISB{
+		Config: cfg,
+		log:    logrus.WithField("pkg", "event"),
+	}
+
+	if err := i.validateConfig(cfg); err != nil {
 		return nil, fmt.Errorf("unable to validate input cfg: %s", err)
 	}
 
-	if cfg.NumConsumers == 0 {
-		cfg.NumConsumers = DefaultNumConsumers
+	return i, nil
+}
+
+func (i *ISB) validateConfig(cfg *Config) error {
+	if cfg.Cache == nil {
+		return errors.New("CacheBackend cannot be nil")
 	}
 
-	return &ISB{
-		Config: cfg,
-		log:    logrus.WithField("pkg", "event"),
-	}, nil
+	if len(cfg.RabbitMap) == 0 {
+		return errors.New("Rabbit map cannot be empty")
+	}
+
+	for name, c := range cfg.RabbitMap {
+		if c.RabbitInstance == nil {
+			return fmt.Errorf("rabbit instance for '%s' cannot be nil", name)
+		}
+
+		if c.Func == "" {
+			return fmt.Errorf("func for '%s' cannot be nil", name)
+		}
+
+		if c.NumConsumers < 1 {
+			c.NumConsumers = DefaultNumConsumers
+		}
+
+		// Is this a legit legit function?
+		method := reflect.ValueOf(i).MethodByName(c.Func)
+
+		if !method.IsValid() {
+			return fmt.Errorf("method for '%s' appears to be invalid", c.Func)
+		}
+
+		f, ok := method.Interface().(func(amqp.Delivery) error)
+		if !ok {
+			return fmt.Errorf("unable to type assert method '%s'", c.Func)
+		}
+
+		cfg.RabbitMap[name].funcReal = f
+	}
+
+	return nil
 }
 
 func (i *ISB) StartConsumers() error {
-	i.log.Debugf("Launching '%d' event consumers", i.NumConsumers)
+	for name, r := range i.RabbitMap {
+		i.log.Debugf("Launching '%d' ISB consumers for '%s'", r.NumConsumers, name)
 
-	for n := 0; n < i.NumConsumers; n++ {
-		go i.Rabbit.Consume(context.Background(), nil, i.ConsumeFunc)
-	}
-
-	return nil
-}
-
-func validateConfig(cfg *Config) error {
-	if cfg.Rabbit == nil {
-		return errors.New("Rabbit cannot be nil")
-	}
-
-	return nil
-}
-
-// This method is intended to be passed as a closure into a rabbit ConsumeAndRun
-func (i *ISB) ConsumeFunc(msg amqp.Delivery) error {
-	if err := msg.Ack(false); err != nil {
-		i.log.Errorf("Error acknowledging message: %s", err)
-		return nil
-	}
-
-	pbMessage := &events.Message{}
-
-	if err := proto.Unmarshal(msg.Body, pbMessage); err != nil {
-		i.log.Errorf("unable to unmarshal event message: %s", err)
-		return nil
-	}
-
-	switch pbMessage.Type {
-	default:
-		i.log.Debugf("got an internal message: %+v", pbMessage)
+		for n := 0; n < r.NumConsumers; n++ {
+			go r.RabbitInstance.Consume(context.Background(), nil, r.funcReal)
+		}
 	}
 
 	return nil
