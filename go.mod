@@ -12,7 +12,6 @@ require (
 	github.com/batchcorp/rabbit v0.1.6
 	github.com/batchcorp/schemas v0.2.41
 	github.com/coreos/go-semver v0.3.0 // indirect
-	github.com/dgraph-io/badger v1.6.1 // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.4.2
 	github.com/jackc/pgx/v4 v4.9.2
