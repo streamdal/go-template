@@ -16,7 +16,6 @@ type Config struct {
 	ListenAddress          string   `envconfig:"LISTEN_ADDRESS" default:":8282"`
 	HealthFreqSec          int      `envconfig:"HEALTH_FREQ_SEC" default:"60"`
 	EnvName                string   `envconfig:"ENV_NAME" default:"local"`
-	BadgerDirectory        string   `envconfig:"BADGER_DIRECTORY" default:"./backend-data/badger"`
 	ServiceName            string   `envconfig:"SERVICE_NAME" default:"go-template"`
 	EtcdEndpoints          []string `envconfig:"ETCD_ENDPOINTS"default:"localhost:2379"`
 	EtcdDialTimeoutSeconds int      `envconfig:"ETCD_DIAL_TIMEOUT_SECONDS" default:"5"`
@@ -26,19 +25,19 @@ type Config struct {
 	EtcdTLSClientKey       string   `envconfig:"ETCD_TLS_CLIENT_KEY"`
 
 	// Queue for _internal_ events
-	ISBURL               string `envconfig:"ISB_URL" default:"amqp://localhost"`
-	ISBExchangeName      string `envconfig:"ISB_EXCHANGE_NAME" default:"events"`
-	ISBExchangeDeclare   bool   `envconfig:"ISB_EXCHANGE_DECLARE" default:"true"`
-	ISBExchangeDurable   bool   `envconfig:"ISB_EXCHANGE_DURABLE" default:"true"`
-	ISBRoutingKey        string `envconfig:"ISB_ROUTING_KEY" default:"messages.collect.#"` // UPDATE THIS
-	ISBQueueName         string `envconfig:"ISB_QUEUE_NAME" default:""`                    // UPDATE THIS
-	ISBNumConsumers      int    `envconfig:"ISB_NUM_CONSUMERS" default:"10"`
-	ISBRetryReconnectSec int    `envconfig:"ISB_RETRY_RECONNECT_SEC" default:"10"`
-	ISBAutoAck           bool   `envconfig:"ISB_AUTO_ACK" default:"false"`
-	ISBQueueDeclare      bool   `envconfig:"ISB_QUEUE_DECLARE" default:"true"`
-	ISBQueueDurable      bool   `envconfig:"ISB_QUEUE_DURABLE" default:"false"`
-	ISBQueueExclusive    bool   `envconfig:"ISB_QUEUE_EXCLUSIVE" default:"true"`
-	ISBQueueAutoDelete   bool   `envconfig:"ISB_QUEUE_AUTO_DELETE" default:"true"`
+	ISBDedicatedURL               string `envconfig:"ISB_DEDICATED_URL" default:"amqp://localhost"`
+	ISBDedicatedExchangeName      string `envconfig:"ISB_DEDICATED_EXCHANGE_NAME" default:"events"`
+	ISBDedicatedExchangeDeclare   bool   `envconfig:"ISB_DEDICATED_EXCHANGE_DECLARE" default:"true"`
+	ISBDedicatedExchangeDurable   bool   `envconfig:"ISB_DEDICATED_EXCHANGE_DURABLE" default:"true"`
+	ISBDedicatedRoutingKey        string `envconfig:"ISB_DEDICATED_ROUTING_KEY" default:"messages.collect.#"` // UPDATE THIS
+	ISBDedicatedQueueName         string `envconfig:"ISB_DEDICATED_QUEUE_NAME" default:""`                    // UPDATE THIS
+	ISBDedicatedNumConsumers      int    `envconfig:"ISB_DEDICATED_NUM_CONSUMERS" default:"10"`
+	ISBDedicatedRetryReconnectSec int    `envconfig:"ISB_DEDICATED_RETRY_RECONNECT_SEC" default:"10"`
+	ISBDedicatedAutoAck           bool   `envconfig:"ISB_DEDICATED_AUTO_ACK" default:"false"`
+	ISBDedicatedQueueDeclare      bool   `envconfig:"ISB_DEDICATED_QUEUE_DECLARE" default:"true"`
+	ISBDedicatedQueueDurable      bool   `envconfig:"ISB_DEDICATED_QUEUE_DURABLE" default:"false"`
+	ISBDedicatedQueueExclusive    bool   `envconfig:"ISB_DEDICATED_QUEUE_EXCLUSIVE" default:"true"`
+	ISBDedicatedQueueAutoDelete   bool   `envconfig:"ISB_DEDICATED_QUEUE_AUTO_DELETE" default:"true"`
 
 	// Queue for hsb messages
 	HSBBrokerURLs     []string      `envconfig:"HSB_BROKER_URLS" default:"localhost:9092"`

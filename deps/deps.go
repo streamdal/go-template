@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 
-	"github.com/batchcorp/go-template/backends/badger"
+	"github.com/batchcorp/go-template/backends/cache"
 	"github.com/batchcorp/go-template/backends/db"
 	"github.com/batchcorp/go-template/backends/etcd"
 	"github.com/batchcorp/go-template/backends/kafka"
@@ -32,11 +32,11 @@ type customCheck struct{}
 
 type Dependencies struct {
 	// Backends
-	BadgerBackend badger.IBadger
-	EtcdBackend   etcd.IEtcd
-	ISBBackend    rabbit.IRabbit
-	HSBBackend    kafka.IKafka
-	Postgres   *postgres.Postgres
+	EtcdBackend         etcd.IEtcd
+	ISBDedicatedBackend rabbit.IRabbit
+	HSBBackend          kafka.IKafka
+	CacheBackend        cache.ICache
+	Postgres            *postgres.Postgres
 
 	// Services
 	ISBService isb.IISB
@@ -97,27 +97,35 @@ func (d *Dependencies) setupHealthChecks() error {
 }
 
 func (d *Dependencies) setupBackends(cfg *config.Config) error {
+	// CacheBackend k/v store
+	cb, err := cache.New()
+	if err != nil {
+		return errors.Wrap(err, "unable to create new cache instance")
+	}
+
+	d.CacheBackend = cb
+
 	// Events rabbitmq backend
-	isbBackend, err := rabbit.New(&rabbit.Options{
-		URL:               cfg.ISBURL,
+	isbDedicatedBackend, err := rabbit.New(&rabbit.Options{
+		URL:               cfg.ISBDedicatedURL,
 		Mode:              0,
-		QueueName:         cfg.ISBQueueName,
-		ExchangeName:      cfg.ISBExchangeName,
+		QueueName:         cfg.ISBDedicatedQueueName,
+		ExchangeName:      cfg.ISBDedicatedExchangeName,
 		ExchangeType:      amqp.ExchangeTopic,
-		ExchangeDeclare:   cfg.ISBExchangeDeclare,
-		RoutingKey:        cfg.ISBRoutingKey,
+		ExchangeDeclare:   cfg.ISBDedicatedExchangeDeclare,
+		RoutingKey:        cfg.ISBDedicatedRoutingKey,
 		RetryReconnectSec: rabbit.DefaultRetryReconnectSec,
-		QueueDurable:      cfg.ISBQueueDurable,
-		QueueExclusive:    cfg.ISBQueueExclusive,
-		QueueAutoDelete:   cfg.ISBQueueAutoDelete,
-		QueueDeclare:      cfg.ISBQueueDeclare,
-		AutoAck:           cfg.ISBAutoAck,
+		QueueDurable:      cfg.ISBDedicatedQueueDurable,
+		QueueExclusive:    cfg.ISBDedicatedQueueExclusive,
+		QueueAutoDelete:   cfg.ISBDedicatedQueueAutoDelete,
+		QueueDeclare:      cfg.ISBDedicatedQueueDeclare,
+		AutoAck:           cfg.ISBDedicatedAutoAck,
 	})
 	if err != nil {
 		return errors.Wrap(err, "unable to create new rabbit backend")
 	}
 
-	d.ISBBackend = isbBackend
+	d.ISBDedicatedBackend = isbDedicatedBackend
 
 	if cfg.HSBUseTLS {
 		logrus.Debug("using TLS for HSB")
@@ -138,14 +146,6 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	}
 
 	d.HSBBackend = hsbBackend
-
-	// BadgerBackend k/v store
-	b, err := badger.New(cfg.BadgerDirectory, d.DefaultContext)
-	if err != nil {
-		return errors.Wrap(err, "unable to create new badger instance")
-	}
-
-	d.BadgerBackend = b
 
 	// etcd
 	var tlsConfig *tls.Config
@@ -191,8 +191,13 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 
 func (d *Dependencies) setupServices(cfg *config.Config) error {
 	isbService, err := isb.New(&isb.Config{
-		Rabbit:       d.ISBBackend,
-		NumConsumers: cfg.ISBNumConsumers,
+		RabbitMap: map[string]*isb.RabbitConfig{
+			"dedicated": {
+				RabbitInstance: d.ISBDedicatedBackend,
+				NumConsumers:   cfg.ISBDedicatedNumConsumers,
+				Func:           "DedicatedConsumeFunc",
+			},
+		},
 	})
 	if err != nil {
 		return errors.Wrap(err, "unable to setup event")
