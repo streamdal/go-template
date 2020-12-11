@@ -12,10 +12,11 @@ github.com/alecthomas/template/parse
 github.com/alecthomas/units
 # github.com/batchcorp/rabbit v0.1.6
 github.com/batchcorp/rabbit
-# github.com/batchcorp/schemas v0.2.41
+# github.com/batchcorp/schemas v0.2.72
 github.com/batchcorp/schemas/build/go/events
 github.com/batchcorp/schemas/build/go/events/destinations
-github.com/batchcorp/schemas/build/go/events/records
+github.com/batchcorp/schemas/build/go/events/metrics
+github.com/batchcorp/schemas/build/go/events/tasks
 # github.com/coreos/etcd v3.3.25+incompatible
 github.com/coreos/etcd/auth/authpb
 github.com/coreos/etcd/clientv3/balancer

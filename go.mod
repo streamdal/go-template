@@ -10,7 +10,7 @@ require (
 	github.com/InVisionApp/go-logger v1.0.1
 	github.com/batchcorp/grpc-collector v0.0.0-20201114005607-9551461241df // indirect
 	github.com/batchcorp/rabbit v0.1.6
-	github.com/batchcorp/schemas v0.2.41
+	github.com/batchcorp/schemas v0.2.72
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.4.2
@@ -25,6 +25,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/relistan/go-director v0.0.0-20200406104025-dbbf5d95248d
+	github.com/satori/go.uuid v1.2.0
 	github.com/segmentio/kafka-go v0.3.7
 	github.com/sirupsen/logrus v1.7.0
 	github.com/streadway/amqp v1.0.0
