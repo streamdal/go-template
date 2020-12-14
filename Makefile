@@ -38,6 +38,7 @@ setup/linux:
 setup/darwin: description = Install dev tools for darwin
 setup/darwin:
 	GO111MODULE=off go get github.com/maxbrunsfeld/counterfeiter
+	brew install doctl
 
 .PHONY: run
 run: description = Run $(SERVICE)
@@ -147,7 +148,7 @@ migrate/rollback:
 .PHONY: kube/deploy/dev
 kube/deploy/dev: description = Deploy image to kubernetes cluster
 kube/deploy/dev:
-	aws eks --region us-west-2 update-kubeconfig --name batch-dev-1 && \
+	doctl kubernetes cluster kubeconfig save do-dev && \
 	cat deploy.dev.yaml | sed "s/{{VERSION}}/$(VERSION)/g" | kubectl apply -f -
 
 .PHONY: kube/deploy/prod
