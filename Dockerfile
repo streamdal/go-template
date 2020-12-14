@@ -23,9 +23,11 @@ RUN apk --update add bash curl ca-certificates && update-ca-certificates
 
 # Install binary
 COPY --from=builder /build/go-template-linux /go-template-linux
+COPY --from=builder /docker-entrypoint.sh /docker-entrypoint.sh
 
 RUN mkdir -p /backend-data/badger
 
 EXPOSE 8080
 
+COPY --from=builder /docker-entrypoint.sh /docker-entrypoint.sh
 CMD ["/go-template-linux", "-d"]
