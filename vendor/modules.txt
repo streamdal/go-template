@@ -12,7 +12,7 @@ github.com/alecthomas/template/parse
 github.com/alecthomas/units
 # github.com/batchcorp/rabbit v0.1.6
 github.com/batchcorp/rabbit
-# github.com/batchcorp/schemas v0.2.72
+# github.com/batchcorp/schemas v0.2.74
 github.com/batchcorp/schemas/build/go/events
 github.com/batchcorp/schemas/build/go/events/destinations
 github.com/batchcorp/schemas/build/go/events/metrics
