@@ -36,6 +36,8 @@ github.com/batchcorp/schemas v0.2.41 h1:Kvq/fgb+HSp1Ips2TsTUktTEm+GPKa7myTlf8CYA
 github.com/batchcorp/schemas v0.2.41/go.mod h1:rV0bcszms4RkpGOr1khcYS27glm6QOChmxZ4dC4VOaI=
 github.com/batchcorp/schemas v0.2.72 h1:oL33eeExmkLG4/HYry4Z7cf/n8NA7HV19xWnk3Dtu8E=
 github.com/batchcorp/schemas v0.2.72/go.mod h1:rV0bcszms4RkpGOr1khcYS27glm6QOChmxZ4dC4VOaI=
+github.com/batchcorp/schemas v0.2.74 h1:wZAvAQ2NGQ0d0kDcT05R8bVjH0HS9X4OjMtlO6oqH9c=
+github.com/batchcorp/schemas v0.2.74/go.mod h1:rV0bcszms4RkpGOr1khcYS27glm6QOChmxZ4dC4VOaI=
 github.com/batchcorp/schemas/util/publish v0.0.0-20200622021112-903044310a85/go.mod h1:zD8BqPOqqGw2wWhGrJx8CguDKKuOPGo1TXOuz5b4OR4=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=

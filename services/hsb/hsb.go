@@ -107,7 +107,7 @@ func (h *HSB) Run(id string) {
 				return nil
 			}
 
-			if err := h.Kafka.PublishWithRetry(ctx, work.Context.Collect.XCollectorHsbTopic, data, 3); err != nil {
+			if err := h.Kafka.PublishWithRetry(ctx, work.Batch.Collect.XCollectorHsbTopic, data, 3); err != nil {
 				llog.Errorf("unable to publish msg: %s", err)
 				return nil
 			}
