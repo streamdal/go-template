@@ -31,4 +31,4 @@ RUN chmod +x /dbmate && chmod +x /docker-entrypoint.sh
 
 EXPOSE 8080
 
-CMD ["/docker-entrypoint"]
+CMD ["/docker-entrypoint.sh"]
