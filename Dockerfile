@@ -21,13 +21,14 @@ FROM library/alpine:$ALPINE_VERSION
 # Necessary depedencies
 RUN apk --update add bash curl ca-certificates && update-ca-certificates
 
-# Install binary
+# Copy bin, tools, scripts, migrations
 COPY --from=builder /build/go-template-linux /go-template-linux
 COPY --from=builder /docker-entrypoint.sh /docker-entrypoint.sh
+COPY --from=builder /backends/db/migrations /migrations
+COPY --from=builder /dbmate /dbmate
 
-RUN mkdir -p /backend-data/badger
+RUN chmod +x /dbmate && chmod +x /docker-entrypoint.sh
 
 EXPOSE 8080
 
-COPY --from=builder /docker-entrypoint.sh /docker-entrypoint.sh
-CMD ["/go-template-linux", "-d"]
+CMD ["/docker-entrypoint"]
