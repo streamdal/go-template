@@ -120,6 +120,8 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		QueueAutoDelete:   cfg.ISBDedicatedQueueAutoDelete,
 		QueueDeclare:      cfg.ISBDedicatedQueueDeclare,
 		AutoAck:           cfg.ISBDedicatedAutoAck,
+		UseTLS:            cfg.ISBDedicatedUseTLS,
+		SkipVerifyTLS:     cfg.ISBDedicatedSkipVerifyTLS,
 	})
 	if err != nil {
 		return errors.Wrap(err, "unable to create new rabbit backend")

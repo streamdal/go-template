@@ -38,6 +38,8 @@ type Config struct {
 	ISBDedicatedQueueDurable      bool   `envconfig:"ISB_DEDICATED_QUEUE_DURABLE" default:"false"`
 	ISBDedicatedQueueExclusive    bool   `envconfig:"ISB_DEDICATED_QUEUE_EXCLUSIVE" default:"true"`
 	ISBDedicatedQueueAutoDelete   bool   `envconfig:"ISB_DEDICATED_QUEUE_AUTO_DELETE" default:"true"`
+	ISBSharedUseTLS               bool   `envconfig:"ISB_SHARED_USE_TLS" default:"false"`
+	ISBSharedSkipVerifyTLS        bool   `envconfig:"ISB_SHARED_SKIP_VERIFY_TLS" default:"false"`
 
 	// Queue for hsb messages
 	HSBBrokerURLs     []string      `envconfig:"HSB_BROKER_URLS" default:"localhost:9092"`
