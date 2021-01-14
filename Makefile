@@ -46,7 +46,7 @@ run:
 	$(GO) run `ls -1 *.go | grep -v _test.go` -d
 
 .PHONY: start/deps
-start/deps: description = Start dependencies
+start/deps: description = Start dependenciesgit 
 start/deps:
 	docker-compose up -d rabbitmq kafka kafdrop etcd postgres
 
@@ -149,13 +149,19 @@ migrate/rollback:
 kube/deploy/dev: description = Deploy image to kubernetes cluster
 kube/deploy/dev:
 	doctl kubernetes cluster kubeconfig save do-dev && \
-	cat deploy.dev.yaml | sed "s/{{VERSION}}/$(VERSION)/g" | kubectl apply -f -
+	cat deploy.dev.yaml | \
+	sed "s/{{VERSION}}/$(VERSION)/g" | \
+	python3 scripts/vaultelier.py | \
+	kubectl apply -f -
 
 .PHONY: kube/deploy/prod
 kube/deploy/prod: description = Deploy image to kubernetes cluster
 kube/deploy/prod:
 	aws eks --region us-west-2 update-kubeconfig --name batch-prod-1 && \
-	cat deploy.prod.yaml | sed "s/{{VERSION}}/$(VERSION)/g" | kubectl apply -f -
+	cat deploy.prod.yaml | \
+	sed "s/{{VERSION}}/$(VERSION)/g" | \
+	python3 scripts/vaultelier.py | \
+	kubectl apply -f -
 
 .PHONY: kube/delete
 kube/delete: description = Deletes pods from cluster
