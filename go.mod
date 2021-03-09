@@ -9,8 +9,8 @@ require (
 	github.com/InVisionApp/go-health v2.1.0+incompatible
 	github.com/InVisionApp/go-logger v1.0.1
 	github.com/batchcorp/grpc-collector v0.0.0-20201114005607-9551461241df // indirect
-	github.com/batchcorp/rabbit v0.1.9
-	github.com/batchcorp/schemas v0.2.115
+	github.com/batchcorp/rabbit v0.1.16
+	github.com/batchcorp/schemas v0.2.116
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.4.2

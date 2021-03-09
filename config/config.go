@@ -25,21 +25,21 @@ type Config struct {
 	EtcdTLSClientKey       string   `envconfig:"ETCD_TLS_CLIENT_KEY"`
 
 	// Queue for _internal_ events
-	ISBDedicatedURL               string `envconfig:"ISB_DEDICATED_URL" default:"amqp://localhost"`
-	ISBDedicatedExchangeName      string `envconfig:"ISB_DEDICATED_EXCHANGE_NAME" default:"events"`
-	ISBDedicatedExchangeDeclare   bool   `envconfig:"ISB_DEDICATED_EXCHANGE_DECLARE" default:"true"`
-	ISBDedicatedExchangeDurable   bool   `envconfig:"ISB_DEDICATED_EXCHANGE_DURABLE" default:"true"`
-	ISBDedicatedRoutingKey        string `envconfig:"ISB_DEDICATED_ROUTING_KEY" default:"messages.collect.#"` // UPDATE THIS
-	ISBDedicatedQueueName         string `envconfig:"ISB_DEDICATED_QUEUE_NAME" default:""`                    // UPDATE THIS
-	ISBDedicatedNumConsumers      int    `envconfig:"ISB_DEDICATED_NUM_CONSUMERS" default:"10"`
-	ISBDedicatedRetryReconnectSec int    `envconfig:"ISB_DEDICATED_RETRY_RECONNECT_SEC" default:"10"`
-	ISBDedicatedAutoAck           bool   `envconfig:"ISB_DEDICATED_AUTO_ACK" default:"false"`
-	ISBDedicatedQueueDeclare      bool   `envconfig:"ISB_DEDICATED_QUEUE_DECLARE" default:"true"`
-	ISBDedicatedQueueDurable      bool   `envconfig:"ISB_DEDICATED_QUEUE_DURABLE" default:"false"`
-	ISBDedicatedQueueExclusive    bool   `envconfig:"ISB_DEDICATED_QUEUE_EXCLUSIVE" default:"true"`
-	ISBDedicatedQueueAutoDelete   bool   `envconfig:"ISB_DEDICATED_QUEUE_AUTO_DELETE" default:"true"`
-	ISBSharedUseTLS               bool   `envconfig:"ISB_SHARED_USE_TLS" default:"false"`
-	ISBSharedSkipVerifyTLS        bool   `envconfig:"ISB_SHARED_SKIP_VERIFY_TLS" default:"false"`
+	ISBDedicatedURLs              []string `envconfig:"ISB_DEDICATED_URL" default:"amqp://localhost"`
+	ISBDedicatedExchangeName      string   `envconfig:"ISB_DEDICATED_EXCHANGE_NAME" default:"events"`
+	ISBDedicatedExchangeDeclare   bool     `envconfig:"ISB_DEDICATED_EXCHANGE_DECLARE" default:"true"`
+	ISBDedicatedExchangeDurable   bool     `envconfig:"ISB_DEDICATED_EXCHANGE_DURABLE" default:"true"`
+	ISBDedicatedBindingKeys       []string `envconfig:"ISB_DEDICATED_ROUTING_KEY" default:"messages.collect.#"` // UPDATE THIS
+	ISBDedicatedQueueName         string   `envconfig:"ISB_DEDICATED_QUEUE_NAME" default:""`                    // UPDATE THIS
+	ISBDedicatedNumConsumers      int      `envconfig:"ISB_DEDICATED_NUM_CONSUMERS" default:"10"`
+	ISBDedicatedRetryReconnectSec int      `envconfig:"ISB_DEDICATED_RETRY_RECONNECT_SEC" default:"10"`
+	ISBDedicatedAutoAck           bool     `envconfig:"ISB_DEDICATED_AUTO_ACK" default:"false"`
+	ISBDedicatedQueueDeclare      bool     `envconfig:"ISB_DEDICATED_QUEUE_DECLARE" default:"true"`
+	ISBDedicatedQueueDurable      bool     `envconfig:"ISB_DEDICATED_QUEUE_DURABLE" default:"false"`
+	ISBDedicatedQueueExclusive    bool     `envconfig:"ISB_DEDICATED_QUEUE_EXCLUSIVE" default:"true"`
+	ISBDedicatedQueueAutoDelete   bool     `envconfig:"ISB_DEDICATED_QUEUE_AUTO_DELETE" default:"true"`
+	ISBDedicatedUseTLS            bool     `envconfig:"ISB_SHARED_USE_TLS" default:"false"`
+	ISBDedicatedSkipVerifyTLS     bool     `envconfig:"ISB_SHARED_SKIP_VERIFY_TLS" default:"false"`
 
 	// Queue for hsb messages
 	HSBBrokerURLs     []string      `envconfig:"HSB_BROKER_URLS" default:"localhost:9092"`

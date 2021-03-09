@@ -107,19 +107,24 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 
 	// Events rabbitmq backend
 	isbDedicatedBackend, err := rabbit.New(&rabbit.Options{
-		URL:               cfg.ISBDedicatedURL,
+		URLs:               cfg.ISBDedicatedURLs,
 		Mode:              0,
 		QueueName:         cfg.ISBDedicatedQueueName,
-		ExchangeName:      cfg.ISBDedicatedExchangeName,
-		ExchangeType:      amqp.ExchangeTopic,
-		ExchangeDeclare:   cfg.ISBDedicatedExchangeDeclare,
-		RoutingKey:        cfg.ISBDedicatedRoutingKey,
+		Bindings: []rabbit.Binding{
+			{
+				ExchangeName:      cfg.ISBDedicatedExchangeName,
+				ExchangeType:      amqp.ExchangeTopic,
+				ExchangeDeclare:   cfg.ISBDedicatedExchangeDeclare,
+				BindingKeys:        cfg.ISBDedicatedBindingKeys,
+			},
+		},
 		RetryReconnectSec: rabbit.DefaultRetryReconnectSec,
 		QueueDurable:      cfg.ISBDedicatedQueueDurable,
 		QueueExclusive:    cfg.ISBDedicatedQueueExclusive,
 		QueueAutoDelete:   cfg.ISBDedicatedQueueAutoDelete,
 		QueueDeclare:      cfg.ISBDedicatedQueueDeclare,
 		AutoAck:           cfg.ISBDedicatedAutoAck,
+		AppID:             cfg.ServiceName,
 		UseTLS:            cfg.ISBDedicatedUseTLS,
 		SkipVerifyTLS:     cfg.ISBDedicatedSkipVerifyTLS,
 	})
