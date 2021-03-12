@@ -1,8 +1,18 @@
 #!/usr/bin/env python
 #
-# Vaultelier -- script for finding/replacing vault secrets in your k8s deploy cfg
+# Vaultelier -- script for pulling secrets from vault at deploy time with
+#               vanilla python (ie. zero non-core deps).
 #
-# Usage: cat config.yaml | python vaultelier.py | kubectl apply -f -
+# Usage:
+#
+# Reference vault values for env vars via: "{{vault:path:key}}"
+#
+# Deploy: cat deploy.yaml | python vaultelier.py | kubectl apply -f -
+#
+# NOTE: This script does some funky stuff to support multi-line values. It uses
+# various regex and as everyone knows, nothing ever breaks when you use regex.
+#
+# Tested with python3.8
 #
 
 import os
@@ -124,6 +134,45 @@ def replace_secrets(input_file, have_secrets):
     return lines, None
 
 
+def yaml_print(input_str):
+    prev_line = ""
+    last_value_indent_num = 0
+
+    for line in input_str.splitlines():
+        if last_value_indent_num != 0:
+            # Does this line have no leading spaces? Probably a multiline
+            if re.search('^(?!\s+).+', line):
+                if prev_line != "":
+                    print(" " * (last_value_indent_num+2) + prev_line)
+                    prev_line = ""
+
+                print(" " * (last_value_indent_num+2) + re.sub('"$', '', line))
+            else:
+                # reset indent
+                last_value_indent_num = 0
+                print(line)
+
+            continue
+
+        # if a value line starts with double quote but doesn't get closed, it is
+        # _probably_ a multi-line value string (using negative lookbehind)
+        match_obj = re.match('^(\s+)value:\s+"(.+(?<!"))$', line)
+
+        if match_obj is None:
+            # non-multiline value string
+            print(line)
+            continue
+
+        # Record the indent level, so we can "adjust" the next line
+        last_value_indent_num = len(match_obj.group(1))
+
+        # Record the value content of the line
+        prev_line = match_obj.group(2)
+
+        # Print the block scalar instead of our actual line
+        print(" " * last_value_indent_num + "value: |+")
+
+
 def main():
     # Ensure 'vault' CLI tool exists
     err = validate_env()
@@ -153,7 +202,7 @@ def main():
         print("ERROR: Unable to replace secrets: %s" % err)
         sys.exit(1)
 
-    print(output_file)
+    yaml_print(output_file)
 
     sys.exit(0)
 
