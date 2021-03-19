@@ -166,7 +166,7 @@ kube/deploy/prod:
 .PHONY: kube/delete
 kube/delete: description = Deletes pods from cluster
 kube/delete:
-	kubectl delete pods -l app=writer
+	kubectl delete pods -l app=$(SERVICE)
 
 .PHONY: kube/logs
 kube/logs: description = Get pod logs
