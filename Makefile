@@ -90,8 +90,8 @@ testv:
 .PHONY: docker/build
 docker/build: description = Build docker image
 docker/build:
-	docker build -t docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):$(VERSION) \
-	-t docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):latest \
+	docker build -t ghcr.io/batchcorp/$(SERVICE)/$(SERVICE):$(VERSION) \
+	-t ghcr.io/batchcorp/$(SERVICE)/$(SERVICE):latest \
 	-f ./Dockerfile .
 
 .PHONY: docker/run
@@ -102,8 +102,8 @@ docker/run:
 .PHONY: docker/push
 docker/push: description = Push local docker image
 docker/push:
-	docker push docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):$(VERSION) && \
-	docker push docker.pkg.github.com/batchcorp/$(SERVICE)/$(SERVICE):latest
+	docker push ghcr.io/batchcorp/$(SERVICE)/$(SERVICE):$(VERSION) && \
+	docker push ghcr.io/batchcorp/$(SERVICE)/$(SERVICE):latest
 
 
 ### Database Operations

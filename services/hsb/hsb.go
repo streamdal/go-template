@@ -60,7 +60,7 @@ func New(cfg *Config) (*HSB, error) {
 	}
 
 	if cfg.Looper == nil {
-		cfg.Looper = director.NewFreeLooper(director.FOREVER, make(chan error))
+		cfg.Looper = director.NewFreeLooper(director.FOREVER, make(chan error, 1))
 	}
 
 	// Create, and return the worker.

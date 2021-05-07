@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: go-template
-          image: docker.pkg.github.com/batchcorp/go-template/go-template:{{VERSION}}
+          image: ghcr.io/batchcorp/{{SERVICE}}:{{VERSION}}
           ports:
             - containerPort: 8282
           env:
@@ -62,4 +62,4 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 5
       imagePullSecrets:
-        - name: regcred
+        - name: regcredv2
