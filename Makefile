@@ -85,13 +85,19 @@ testv: GOFLAGS=
 testv:
 	$(GO) test ./... -v
 
+.PHONY: test/coverage
+test/coverage: description = Run Go unit tests
+test/coverage: GOFLAGS=
+test/coverage:
+	$(GO) test ./... -coverprofile c.out
+
 ### Docker
 
 .PHONY: docker/build
 docker/build: description = Build docker image
 docker/build:
-	docker build -t ghcr.io/batchcorp/$(SERVICE)/$(SERVICE):$(VERSION) \
-	-t ghcr.io/batchcorp/$(SERVICE)/$(SERVICE):latest \
+	docker build -t ghcr.io/batchcorp/$(SERVICE):$(VERSION) \
+	-t ghcr.io/batchcorp/$(SERVICE):latest \
 	-f ./Dockerfile .
 
 .PHONY: docker/run
@@ -102,8 +108,8 @@ docker/run:
 .PHONY: docker/push
 docker/push: description = Push local docker image
 docker/push:
-	docker push ghcr.io/batchcorp/$(SERVICE)/$(SERVICE):$(VERSION) && \
-	docker push ghcr.io/batchcorp/$(SERVICE)/$(SERVICE):latest
+	docker push ghcr.io/batchcorp/$(SERVICE):$(VERSION) && \
+	docker push ghcr.io/batchcorp/$(SERVICE):latest
 
 
 ### Database Operations
@@ -151,6 +157,7 @@ kube/deploy/dev:
 	doctl kubernetes cluster kubeconfig save do-dev && \
 	cat deploy.dev.yaml | \
 	sed "s/{{VERSION}}/$(VERSION)/g" | \
+	sed "s/{{SERVICE}}/$(SERVICE)/g" | \
 	python3 scripts/vaultelier.py | \
 	kubectl apply -f -
 
@@ -160,6 +167,7 @@ kube/deploy/prod:
 	aws eks --region us-west-2 update-kubeconfig --name batch-prod-1 && \
 	cat deploy.prod.yaml | \
 	sed "s/{{VERSION}}/$(VERSION)/g" | \
+	sed "s/{{SERVICE}}/$(SERVICE)/g" | \
 	python3 scripts/vaultelier.py | \
 	kubectl apply -f -
 

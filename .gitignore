@@ -4,3 +4,4 @@ backend-data/rabbitmq
 backend-data/etcd
 backend-data/badger
 backend-data/kafka
+c.out
