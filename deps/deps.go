@@ -198,6 +198,7 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 
 func (d *Dependencies) setupServices(cfg *config.Config) error {
 	isbService, err := isb.New(&isb.Config{
+		Cache: d.CacheBackend,
 		RabbitMap: map[string]*isb.RabbitConfig{
 			"dedicated": {
 				RabbitInstance: d.ISBDedicatedBackend,
