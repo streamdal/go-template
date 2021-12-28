@@ -1,8 +1,6 @@
 module github.com/batchcorp/go-template
 
-go 1.13
-
-replace google.golang.org/grpc => google.golang.org/grpc v1.26.0
+go 1.16
 
 require (
 	github.com/DataDog/datadog-go v4.0.1+incompatible // indirect
@@ -12,8 +10,7 @@ require (
 	github.com/batchcorp/rabbit v0.1.16
 	github.com/batchcorp/schemas v0.2.116
 	github.com/coreos/go-semver v0.3.0 // indirect
-	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/golang/protobuf v1.4.2
+	github.com/golang/protobuf v1.5.2
 	github.com/jackc/pgx/v4 v4.9.2
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/joho/godotenv v1.3.0
@@ -29,7 +26,8 @@ require (
 	github.com/segmentio/kafka-go v0.3.7
 	github.com/sirupsen/logrus v1.7.0
 	github.com/streadway/amqp v1.0.0
-	go.etcd.io/etcd v3.3.22+incompatible
+	go.etcd.io/etcd v3.3.22+incompatible // indirect
+	go.etcd.io/etcd/client/v3 v3.5.1
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0 // indirect
 	gopkg.in/DataDog/dd-trace-go.v1 v1.27.1
