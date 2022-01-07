@@ -26,10 +26,12 @@ require (
 	github.com/segmentio/kafka-go v0.3.7
 	github.com/sirupsen/logrus v1.7.0
 	github.com/streadway/amqp v1.0.0
+	github.com/tidwall/gjson v1.9.3 // indirect
 	go.etcd.io/etcd v3.3.22+incompatible // indirect
 	go.etcd.io/etcd/client/v3 v3.5.1
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0 // indirect
 	gopkg.in/DataDog/dd-trace-go.v1 v1.27.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
+	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
