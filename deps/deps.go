@@ -8,11 +8,12 @@ import (
 
 	"github.com/InVisionApp/go-health"
 	gllogrus "github.com/InVisionApp/go-logger/shims/logrus"
-	"github.com/batchcorp/rabbit"
-	"github.com/batchcorp/schemas/build/go/events"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
+
+	"github.com/batchcorp/rabbit"
+	"github.com/batchcorp/schemas/build/go/events"
 
 	"github.com/batchcorp/go-template/backends/cache"
 	"github.com/batchcorp/go-template/backends/db"
@@ -34,6 +35,7 @@ type Dependencies struct {
 	// Backends
 	EtcdBackend         etcd.IEtcd
 	ISBDedicatedBackend rabbit.IRabbit
+	ISBSharedBackend    rabbit.IRabbit
 	HSBBackend          kafka.IKafka
 	CacheBackend        cache.ICache
 	Postgres            *postgres.Postgres
@@ -107,15 +109,15 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 
 	// Events rabbitmq backend
 	isbDedicatedBackend, err := rabbit.New(&rabbit.Options{
-		URLs:               cfg.ISBDedicatedURLs,
-		Mode:              0,
-		QueueName:         cfg.ISBDedicatedQueueName,
+		URLs:      cfg.ISBDedicatedURLs,
+		Mode:      0,
+		QueueName: cfg.ISBDedicatedQueueName,
 		Bindings: []rabbit.Binding{
 			{
-				ExchangeName:      cfg.ISBDedicatedExchangeName,
-				ExchangeType:      amqp.ExchangeTopic,
-				ExchangeDeclare:   cfg.ISBDedicatedExchangeDeclare,
-				BindingKeys:        cfg.ISBDedicatedBindingKeys,
+				ExchangeName:    cfg.ISBDedicatedExchangeName,
+				ExchangeType:    amqp.ExchangeTopic,
+				ExchangeDeclare: cfg.ISBDedicatedExchangeDeclare,
+				BindingKeys:     cfg.ISBDedicatedBindingKeys,
 			},
 		},
 		RetryReconnectSec: rabbit.DefaultRetryReconnectSec,
@@ -129,10 +131,39 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		SkipVerifyTLS:     cfg.ISBDedicatedSkipVerifyTLS,
 	})
 	if err != nil {
-		return errors.Wrap(err, "unable to create new rabbit backend")
+		return errors.Wrap(err, "unable to create new dedicated rabbit backend")
 	}
 
 	d.ISBDedicatedBackend = isbDedicatedBackend
+
+	// Shared backend
+	isbSharedBackend, err := rabbit.New(&rabbit.Options{
+		URLs:      cfg.ISBSharedURLs,
+		Mode:      0,
+		QueueName: cfg.ISBSharedQueueName,
+		Bindings: []rabbit.Binding{
+			{
+				ExchangeName:    cfg.ISBSharedExchangeName,
+				ExchangeType:    amqp.ExchangeTopic,
+				ExchangeDeclare: cfg.ISBSharedExchangeDeclare,
+				ExchangeDurable: cfg.ISBSharedExchangeDurable,
+				BindingKeys:     cfg.ISBSharedBindingKeys,
+			},
+		},
+		RetryReconnectSec: rabbit.DefaultRetryReconnectSec,
+		QueueDurable:      cfg.ISBSharedQueueDurable,
+		QueueExclusive:    cfg.ISBSharedQueueExclusive,
+		QueueAutoDelete:   cfg.ISBSharedQueueAutoDelete,
+		QueueDeclare:      cfg.ISBSharedQueueDeclare,
+		AutoAck:           cfg.ISBSharedAutoAck,
+		UseTLS:            cfg.ISBSharedUseTLS,
+		SkipVerifyTLS:     cfg.ISBSharedSkipVerifyTLS,
+	})
+	if err != nil {
+		return errors.Wrap(err, "unable to create new shared rabbit backend")
+	}
+
+	d.ISBSharedBackend = isbSharedBackend
 
 	if cfg.HSBUseTLS {
 		logrus.Debug("using TLS for HSB")
@@ -204,6 +235,11 @@ func (d *Dependencies) setupServices(cfg *config.Config) error {
 				RabbitInstance: d.ISBDedicatedBackend,
 				NumConsumers:   cfg.ISBDedicatedNumConsumers,
 				Func:           "DedicatedConsumeFunc",
+			},
+			"shared": {
+				RabbitInstance: d.ISBSharedBackend,
+				NumConsumers:   cfg.ISBSharedNumConsumers,
+				Func:           "SharedConsumeFunc",
 			},
 		},
 	})

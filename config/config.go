@@ -30,7 +30,7 @@ type Config struct {
 	ISBDedicatedExchangeDeclare   bool     `envconfig:"ISB_DEDICATED_EXCHANGE_DECLARE" default:"true"`
 	ISBDedicatedExchangeDurable   bool     `envconfig:"ISB_DEDICATED_EXCHANGE_DURABLE" default:"true"`
 	ISBDedicatedBindingKeys       []string `envconfig:"ISB_DEDICATED_ROUTING_KEY" default:"messages.collect.#"` // UPDATE THIS
-	ISBDedicatedQueueName         string   `envconfig:"ISB_DEDICATED_QUEUE_NAME" default:""`                    // UPDATE THIS
+	ISBDedicatedQueueName         string   `envconfig:"ISB_DEDICATED_QUEUE_NAME" default:""`                    // Purposefully left blank
 	ISBDedicatedNumConsumers      int      `envconfig:"ISB_DEDICATED_NUM_CONSUMERS" default:"10"`
 	ISBDedicatedRetryReconnectSec int      `envconfig:"ISB_DEDICATED_RETRY_RECONNECT_SEC" default:"10"`
 	ISBDedicatedAutoAck           bool     `envconfig:"ISB_DEDICATED_AUTO_ACK" default:"false"`
@@ -38,8 +38,25 @@ type Config struct {
 	ISBDedicatedQueueDurable      bool     `envconfig:"ISB_DEDICATED_QUEUE_DURABLE" default:"false"`
 	ISBDedicatedQueueExclusive    bool     `envconfig:"ISB_DEDICATED_QUEUE_EXCLUSIVE" default:"true"`
 	ISBDedicatedQueueAutoDelete   bool     `envconfig:"ISB_DEDICATED_QUEUE_AUTO_DELETE" default:"true"`
-	ISBDedicatedUseTLS            bool     `envconfig:"ISB_SHARED_USE_TLS" default:"false"`
-	ISBDedicatedSkipVerifyTLS     bool     `envconfig:"ISB_SHARED_SKIP_VERIFY_TLS" default:"false"`
+	ISBDedicatedUseTLS            bool     `envconfig:"ISB_DEDICATED_USE_TLS" default:"false"`
+	ISBDedicatedSkipVerifyTLS     bool     `envconfig:"ISB_DEDICATED_SKIP_VERIFY_TLS" default:"false"`
+
+	// Shared queue. Used for messages that should be received by only one instance of this service
+	ISBSharedURLs              []string `envconfig:"ISB_SHARED_URL" default:"amqp://localhost"`
+	ISBSharedExchangeName      string   `envconfig:"ISB_SHARED_EXCHANGE_NAME" default:"events"`
+	ISBSharedExchangeDeclare   bool     `envconfig:"ISB_SHARED_EXCHANGE_DECLARE" default:"false"`
+	ISBSharedExchangeDurable   bool     `envconfig:"ISB_SHARED_EXCHANGE_DURABLE" default:"true"`
+	ISBSharedBindingKeys       []string `envconfig:"ISB_SHARED_ROUTING_KEY" default:"messages.collect.#"` // UPDATE THIS
+	ISBSharedQueueName         string   `envconfig:"ISB_SHARED_QUEUE_NAME" default:"go-template_shared"`
+	ISBSharedNumConsumers      int      `envconfig:"ISB_SHARED_NUM_CONSUMERS" default:"3"`
+	ISBSharedRetryReconnectSec int      `envconfig:"ISB_SHARED_RETRY_RECONNECT_SEC" default:"10"`
+	ISBSharedAutoAck           bool     `envconfig:"ISB_SHARED_AUTO_ACK" default:"false"`
+	ISBSharedQueueDeclare      bool     `envconfig:"ISB_SHARED_QUEUE_DECLARE" default:"true"`
+	ISBSharedQueueDurable      bool     `envconfig:"ISB_SHARED_QUEUE_DURABLE" default:"true"`
+	ISBSharedQueueExclusive    bool     `envconfig:"ISB_SHARED_QUEUE_EXCLUSIVE" default:"false"`
+	ISBSharedQueueAutoDelete   bool     `envconfig:"ISB_SHARED_QUEUE_AUTO_DELETE" default:"false"`
+	ISBSharedUseTLS            bool     `envconfig:"ISB_SHARED_USE_TLS" default:"false"`
+	ISBSharedSkipVerifyTLS     bool     `envconfig:"ISB_SHARED_SKIP_VERIFY_TLS" default:"false"`
 
 	// Queue for hsb messages
 	HSBBrokerURLs     []string      `envconfig:"HSB_BROKER_URLS" default:"localhost:9092"`
