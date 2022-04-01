@@ -147,7 +147,7 @@ migrate/up:
 .PHONY: migrate/rollback
 migrate/rollback: description = Rollsback previous migration
 migrate/rollback:
-	 dbmate -u $(DATABASE_URL) -d $(MIGRATIONS_DIR) --no-dump-schema migrate rollback
+	 dbmate -u $(DATABASE_URL) -d $(MIGRATIONS_DIR) --no-dump-schema rollback
 
 ### Kube
 
