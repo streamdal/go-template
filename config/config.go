@@ -23,6 +23,8 @@ type Config struct {
 	EtcdTLSCACert          string   `envconfig:"ETCD_TLS_CA_CERT"`
 	EtcdTLSClientCert      string   `envconfig:"ETCD_TLS_CLIENT_CERT"`
 	EtcdTLSClientKey       string   `envconfig:"ETCD_TLS_CLIENT_KEY"`
+	EtcdUsername           string   `envconfig:"ETCD_USERNAME"`
+	EtcdPassword           string   `envconfig:"ETCD_PASSWORD"`
 
 	// Queue for _internal_ events
 	ISBDedicatedURLs              []string `envconfig:"ISB_DEDICATED_URL" default:"amqp://localhost"`
@@ -67,11 +69,12 @@ type Config struct {
 	HSBBatchSize      int           `envconfig:"HSB_BATCH_SIZE" default:"1"`
 
 	// Medium term storage
-	BackendStorageHost string `envconfig:"BACKEND_STORAGE_HOST" default:"localhost"`
-	BackendStorageName string `envconfig:"BACKEND_STORAGE_NAME" default:"go-template"`
-	BackendStoragePort int    `envconfig:"BACKEND_STORAGE_PORT" default:"5432"`
-	BackendStorageUser string `envconfig:"BACKEND_STORAGE_USER" default:"postgres"`
-	BackendStoragePass string `envconfig:"BACKEND_STORAGE_PASS"`
+	BackendStorageHost      string `envconfig:"BACKEND_STORAGE_HOST" default:"localhost"`
+	BackendStorageName      string `envconfig:"BACKEND_STORAGE_NAME" default:"go-template"`
+	BackendStoragePort      int    `envconfig:"BACKEND_STORAGE_PORT" default:"5432"`
+	BackendStorageUser      string `envconfig:"BACKEND_STORAGE_USER" default:"postgres"`
+	BackendStoragePass      string `envconfig:"BACKEND_STORAGE_PASS"`
+	BackendStorageEnableTLS bool   `envconfig:"BACKEND_STORAGE_ENABLE_TLS" default:"false"`
 }
 
 func New() *Config {

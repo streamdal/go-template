@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"net/url"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -35,6 +36,7 @@ type Options struct {
 	Port          int
 	RunMigrations bool
 	MigrationsDir string
+	EnableTLS     bool
 }
 
 func New(opts *Options) (*Storage, error) {
@@ -42,7 +44,20 @@ func New(opts *Options) (*Storage, error) {
 		return nil, errors.Wrap(err, "Unable to complete option validation")
 	}
 
-	connInfo := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", opts.User, opts.Pass, opts.Host, opts.Port, opts.Name)
+	u := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(opts.User, opts.Pass),
+		Host:   opts.Host + ":" + fmt.Sprintf("%d", opts.Port),
+		Path:   "/" + opts.Name,
+	}
+
+	if !opts.EnableTLS {
+		q := u.Query()
+		q.Add("sslmode", "disable")
+		u.RawQuery = q.Encode()
+	}
+
+	connInfo := u.String()
 
 	db, err := sqlx.Connect("pgx", connInfo)
 

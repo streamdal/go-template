@@ -201,6 +201,8 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 		Endpoints:   cfg.EtcdEndpoints,
 		DialTimeout: time.Duration(cfg.EtcdDialTimeoutSeconds) * time.Second,
 		TLS:         tlsConfig,
+		Username:    cfg.EtcdUsername,
+		Password:    cfg.EtcdPassword,
 	})
 	if err != nil {
 		return errors.Wrap(err, "unable to create etcd instance")
@@ -209,11 +211,12 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	d.EtcdBackend = e
 
 	storage, err := db.New(&db.Options{
-		Host: cfg.BackendStorageHost,
-		Name: cfg.BackendStorageName,
-		User: cfg.BackendStorageUser,
-		Pass: cfg.BackendStoragePass,
-		Port: cfg.BackendStoragePort,
+		Host:      cfg.BackendStorageHost,
+		Name:      cfg.BackendStorageName,
+		User:      cfg.BackendStorageUser,
+		Pass:      cfg.BackendStoragePass,
+		Port:      cfg.BackendStoragePort,
+		EnableTLS: cfg.BackendStorageEnableTLS,
 	})
 
 	if err != nil {
