@@ -34,6 +34,8 @@ type Options struct {
 	Endpoints   []string
 	DialTimeout time.Duration
 	TLS         *tls.Config
+	Username    string
+	Password    string
 }
 
 func New(opts *Options) (*Etcd, error) {
@@ -44,6 +46,8 @@ func New(opts *Options) (*Etcd, error) {
 	clientConfig := clientv3.Config{
 		Endpoints:   opts.Endpoints,
 		DialTimeout: opts.DialTimeout,
+		Username:    opts.Username,
+		Password:    opts.Password,
 	}
 
 	if opts.TLS != nil {
@@ -96,7 +100,12 @@ func testAvailability(cli *clientv3.Client) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), AvailabilityTimeout)
 
-	_, err := cli.Put(ctx, key, "Are we alive?")
+	lease, err := cli.Grant(ctx, 5)
+	if err != nil {
+		return errors.Wrap(err, "unable to create lease for test file")
+	}
+
+	_, err = cli.Put(ctx, key, "Are we alive?", clientv3.WithLease(lease.ID))
 	cancel()
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("unable to PUT key '%s'", key))
