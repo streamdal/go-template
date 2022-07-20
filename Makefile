@@ -146,7 +146,7 @@ migrate/up:
 
 .PHONY: migrate/rollback
 migrate/rollback: description = Rollsback previous migration
-migrate/rollback:
+migrate/rollback:`¡
 	 dbmate -u $(DATABASE_URL) -d $(MIGRATIONS_DIR) --no-dump-schema rollback
 
 ### Kube
@@ -154,7 +154,7 @@ migrate/rollback:
 .PHONY: kube/deploy/dev
 kube/deploy/dev: description = Deploy image to kubernetes cluster
 kube/deploy/dev:
-	doctl kubernetes cluster kubeconfig save do-dev && \
+	gcloud container clusters get-credentials batch-dev-cluster --region us-west2 REPLACE && \
 	cat deploy.dev.yaml | \
 	sed "s/{{VERSION}}/$(VERSION)/g" | \
 	sed "s/{{SERVICE}}/$(SERVICE)/g" | \
