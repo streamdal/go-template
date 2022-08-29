@@ -96,7 +96,7 @@ test/coverage:
 .PHONY: docker/build
 docker/build: description = Build docker image
 docker/build:
-	docker build -t ghcr.io/batchcorp/$(SERVICE):$(VERSION) \
+	docker build --platform linux/amd64 -t ghcr.io/batchcorp/$(SERVICE):$(VERSION) \
 	-t ghcr.io/batchcorp/$(SERVICE):latest \
 	-f ./Dockerfile .
 
