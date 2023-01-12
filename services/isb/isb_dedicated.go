@@ -1,9 +1,10 @@
 package isb
 
 import (
-	"github.com/batchcorp/schemas/build/go/events"
 	"github.com/golang/protobuf/proto"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
+
+	"github.com/batchcorp/schemas/build/go/events"
 )
 
 // This method is intended to be passed as a closure into a rabbit ConsumeAndRun

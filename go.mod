@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/InVisionApp/go-health v2.1.0+incompatible
 	github.com/InVisionApp/go-logger v1.0.1
-	github.com/batchcorp/rabbit v0.1.16
+	github.com/batchcorp/rabbit v0.1.19
 	github.com/batchcorp/schemas v0.2.116
 	github.com/golang/protobuf v1.5.2
 	github.com/jackc/pgx/v4 v4.9.2
@@ -16,11 +16,11 @@ require (
 	github.com/onsi/gomega v1.10.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
+	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/relistan/go-director v0.0.0-20200406104025-dbbf5d95248d
 	github.com/satori/go.uuid v1.2.0
 	github.com/segmentio/kafka-go v0.3.7
 	github.com/sirupsen/logrus v1.7.0
-	github.com/streadway/amqp v1.0.0
 	go.etcd.io/etcd/client/v3 v3.5.1
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	gopkg.in/DataDog/dd-trace-go.v1 v1.27.1

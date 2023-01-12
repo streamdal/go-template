@@ -20,9 +20,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/relistan/go-director"
 	uuid "github.com/satori/go.uuid"
-	"github.com/streadway/amqp"
 )
 
 const (
@@ -79,7 +79,7 @@ type Rabbit struct {
 }
 
 // Mode is the type used to represent whether the RabbitMQ
-// cliens is acting as a consumer, a producer, or both.
+// clients is acting as a consumer, a producer, or both.
 type Mode int
 
 // Binding represents the information needed to bind a queue to
@@ -141,6 +141,10 @@ type Options struct {
 
 	// Whether to declare/create queue on connect; used only if QueueDeclare set to true
 	QueueDeclare bool
+
+	// Additional arguements to pass to the queue declaration or binding
+	// https://github.com/batchcorp/plumber/issues/210
+	QueueArgs map[string]interface{}
 
 	// Whether to automatically acknowledge consumed message(s)
 	AutoAck bool
@@ -314,6 +318,10 @@ func applyDefaults(opts *Options) {
 	if opts.Log == nil {
 		opts.Log = &NoOpLogger{}
 	}
+
+	if opts.QueueArgs == nil {
+		opts.QueueArgs = make(map[string]interface{})
+	}
 }
 
 func validMode(mode Mode) error {
@@ -445,11 +453,11 @@ func (r *Rabbit) ConsumeOnce(ctx context.Context, runFunc func(msg amqp.Delivery
 
 // Publish publishes one message to the configured exchange, using the specified
 // routing key.
-//
-// NOTE: Context semantics are not implemented.
-//
-// TODO: Implement ctx usage
 func (r *Rabbit) Publish(ctx context.Context, routingKey string, body []byte) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	if r.shutdown {
 		return ErrShutdown
 	}
@@ -473,15 +481,37 @@ func (r *Rabbit) Publish(ctx context.Context, routingKey string, body []byte) er
 	r.ProducerRWMutex.RLock()
 	defer r.ProducerRWMutex.RUnlock()
 
-	if err := r.ProducerServerChannel.Publish(r.Options.Bindings[0].ExchangeName, routingKey, false, false, amqp.Publishing{
-		DeliveryMode: amqp.Persistent,
-		Body:         body,
-		AppId:        r.Options.AppID,
-	}); err != nil {
-		return err
-	}
+	// Create channels for error and done signals
+	chanErr := make(chan error)
+	chanDone := make(chan struct{})
+	go func() {
+		if err := r.ProducerServerChannel.Publish(r.Options.Bindings[0].ExchangeName, routingKey, false, false, amqp.Publishing{
+			DeliveryMode: amqp.Persistent,
+			Body:         body,
+			AppId:        r.Options.AppID,
+		}); err != nil {
+			// Signal there is an error
+			chanErr <- err
+		}
 
-	return nil
+		// Signal we are done
+		chanDone <- struct{}{}
+	}()
+
+	select {
+	case <-chanDone:
+		// We did it!
+		return nil
+	case err := <-chanErr:
+		return errors.Wrap(err, "failed to publish message")
+	case <-ctx.Done():
+		r.log.Warn("stopped via context")
+		err := r.ProducerServerChannel.Close()
+		if err != nil {
+			return errors.Wrap(err, "failed to close producer channel")
+		}
+		return errors.New("context cancelled")
+	}
 }
 
 // Stop stops an in-progress `Consume()` or `ConsumeOnce()`.
@@ -582,7 +612,7 @@ func (r *Rabbit) newServerChannel() (*amqp.Channel, error) {
 				r.Options.QueueAutoDelete,
 				r.Options.QueueExclusive,
 				false,
-				nil,
+				r.Options.QueueArgs,
 			); err != nil {
 				return nil, err
 			}
@@ -612,7 +642,7 @@ func (r *Rabbit) newServerChannel() (*amqp.Channel, error) {
 					bindingKey,
 					binding.ExchangeName,
 					false,
-					nil,
+					r.Options.QueueArgs,
 				); err != nil {
 					return nil, errors.Wrap(err, "unable to bind queue")
 				}

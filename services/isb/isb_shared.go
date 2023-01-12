@@ -2,7 +2,7 @@ package isb
 
 import (
 	"github.com/golang/protobuf/proto"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/batchcorp/schemas/build/go/events"
 )

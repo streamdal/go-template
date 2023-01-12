@@ -9,8 +9,8 @@ import (
 	"github.com/InVisionApp/go-health"
 	gllogrus "github.com/InVisionApp/go-logger/shims/logrus"
 	"github.com/pkg/errors"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
-	"github.com/streadway/amqp"
 
 	"github.com/batchcorp/rabbit"
 	"github.com/batchcorp/schemas/build/go/events"
