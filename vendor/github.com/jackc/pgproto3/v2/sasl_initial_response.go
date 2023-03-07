@@ -2,7 +2,6 @@ package pgproto3
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 
@@ -64,6 +63,25 @@ func (src SASLInitialResponse) MarshalJSON() ([]byte, error) {
 	}{
 		Type:          "SASLInitialResponse",
 		AuthMechanism: src.AuthMechanism,
-		Data:          hex.EncodeToString(src.Data),
+		Data:          string(src.Data),
 	})
+}
+
+// UnmarshalJSON implements encoding/json.Unmarshaler.
+func (dst *SASLInitialResponse) UnmarshalJSON(data []byte) error {
+	// Ignore null, like in the main JSON package.
+	if string(data) == "null" {
+		return nil
+	}
+
+	var msg struct {
+		AuthMechanism string
+		Data          string
+	}
+	if err := json.Unmarshal(data, &msg); err != nil {
+		return err
+	}
+	dst.AuthMechanism = msg.AuthMechanism
+	dst.Data = []byte(msg.Data)
+	return nil
 }

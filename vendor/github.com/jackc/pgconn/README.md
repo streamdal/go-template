@@ -1,5 +1,11 @@
 [![](https://godoc.org/github.com/jackc/pgconn?status.svg)](https://godoc.org/github.com/jackc/pgconn)
-[![Build Status](https://travis-ci.org/jackc/pgconn.svg)](https://travis-ci.org/jackc/pgconn)
+![CI](https://github.com/jackc/pgconn/workflows/CI/badge.svg)
+
+---
+
+This version is used with pgx `v4`. In pgx `v5` it is part of the https://github.com/jackc/pgx repository.
+
+---
 
 # pgconn
 
@@ -52,5 +58,5 @@ PGX_TEST_CONN_STRING="host=/var/run/postgresql dbname=pgx_test" go test ./...
 
 Pgconn supports multiple connection types and means of authentication. These tests are optional. They
 will only run if the appropriate environment variable is set. Run `go test -v | grep SKIP` to see if any tests are being
-skipped. Most developers will not need to enable these tests. See `travis.yml` for an example set up if you need change
+skipped. Most developers will not need to enable these tests. See `ci/setup_test.bash` for an example set up if you need change
 authentication code.
