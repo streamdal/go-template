@@ -4,20 +4,22 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"time"
 
 	"github.com/InVisionApp/go-health"
 	gllogrus "github.com/InVisionApp/go-logger/shims/logrus"
+	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
 
+	"github.com/batchcorp/natty"
 	"github.com/batchcorp/rabbit"
 	"github.com/batchcorp/schemas/build/go/events"
 
 	"github.com/batchcorp/go-template/backends/cache"
 	"github.com/batchcorp/go-template/backends/db"
-	"github.com/batchcorp/go-template/backends/etcd"
 	"github.com/batchcorp/go-template/backends/kafka"
 	"github.com/batchcorp/go-template/backends/postgres"
 	"github.com/batchcorp/go-template/config"
@@ -33,11 +35,11 @@ type customCheck struct{}
 
 type Dependencies struct {
 	// Backends
-	EtcdBackend         etcd.IEtcd
 	ISBDedicatedBackend rabbit.IRabbit
 	ISBSharedBackend    rabbit.IRabbit
 	HSBBackend          kafka.IKafka
 	CacheBackend        cache.ICache
+	NATSBackend         natty.INatty
 	Postgres            *postgres.Postgres
 
 	// Services
@@ -106,6 +108,21 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	}
 
 	d.CacheBackend = cb
+
+	// NATS backend
+	n, err := natty.New(&natty.Config{
+		NatsURL:           cfg.NATSURL,
+		UseTLS:            cfg.NATSUseTLS,
+		TLSCACertFile:     cfg.NATSTLSCaFile,
+		TLSClientCertFile: cfg.NATSTLSCertFile,
+		TLSClientKeyFile:  cfg.NATSTLSKeyFile,
+	})
+
+	if err != nil {
+		return errors.Wrap(err, "unable to create new nats backend")
+	}
+
+	d.NATSBackend = n
 
 	// Events rabbitmq backend
 	isbDedicatedBackend, err := rabbit.New(&rabbit.Options{
@@ -184,31 +201,6 @@ func (d *Dependencies) setupBackends(cfg *config.Config) error {
 	}
 
 	d.HSBBackend = hsbBackend
-
-	// etcd
-	var tlsConfig *tls.Config
-
-	if cfg.EtcdUseTLS {
-		var err error
-
-		tlsConfig, err = createTLSConfig(cfg.EtcdTLSCACert, cfg.EtcdTLSClientCert, cfg.EtcdTLSClientKey)
-		if err != nil {
-			return errors.Wrap(err, "unable to create TLS config for etcd")
-		}
-	}
-
-	e, err := etcd.New(&etcd.Options{
-		Endpoints:   cfg.EtcdEndpoints,
-		DialTimeout: time.Duration(cfg.EtcdDialTimeoutSeconds) * time.Second,
-		TLS:         tlsConfig,
-		Username:    cfg.EtcdUsername,
-		Password:    cfg.EtcdPassword,
-	})
-	if err != nil {
-		return errors.Wrap(err, "unable to create etcd instance")
-	}
-
-	d.EtcdBackend = e
 
 	storage, err := db.New(&db.Options{
 		Host:      cfg.BackendStorageHost,
@@ -290,4 +282,22 @@ func (c *customCheck) Status() (interface{}, error) {
 	// You can return additional information pertaining to the check as long
 	// as it can be JSON marshalled
 	return map[string]int{}, nil
+}
+
+func (d *Dependencies) PreCreateBuckets(ctx context.Context) error {
+	buckets := map[string]time.Duration{
+		//BucketNameHere:      0,
+	}
+
+	for bucketName, ttl := range buckets {
+		if err := d.NATSBackend.CreateBucket(ctx, bucketName, ttl, ""); err != nil {
+			if err == nats.ErrStreamNameAlreadyInUse {
+				continue
+			}
+
+			return fmt.Errorf("unable to create bucket '%s': %s", bucketName, err)
+		}
+	}
+
+	return nil
 }

@@ -24,6 +24,13 @@ const (
 	defaultCommitRetries = 3
 )
 
+const (
+	// defaultFetchMinBytes of 1 byte means that fetch requests are answered as
+	// soon as a single byte of data is available or the fetch request times out
+	// waiting for data to arrive.
+	defaultFetchMinBytes = 1
+)
+
 var (
 	errOnlyAvailableWithGroup = errors.New("unavailable when GroupID is not set")
 	errNotAvailableWithGroup  = errors.New("unavailable when GroupID is set")
@@ -40,6 +47,15 @@ const (
 //
 // A Reader automatically manages reconnections to a kafka server, and
 // blocking methods have context support for asynchronous cancellations.
+//
+// Note that it is important to call `Close()` on a `Reader` when a process exits.
+// The kafka server needs a graceful disconnect to stop it from continuing to
+// attempt to send messages to the connected clients. The given example will not
+// call `Close()` if the process is terminated with SIGINT (ctrl-c at the shell) or
+// SIGTERM (as docker stop or a kubernetes restart does). This can result in a
+// delay when a new reader on the same topic connects (e.g. new process started
+// or new container running). Use a `signal.Notify` handler to close the reader on
+// process shutdown.
 type Reader struct {
 	// immutable fields of the reader
 	config ReaderConfig
@@ -59,6 +75,16 @@ type Reader struct {
 	lag     int64
 	closed  bool
 
+	// Without a group subscription (when Reader.config.GroupID == ""),
+	// when errors occur, the Reader gets a synthetic readerMessage with
+	// a non-nil err set. With group subscriptions however, when an error
+	// occurs in Reader.run, there's no reader running (sic, cf. reader vs.
+	// Reader) and there's no way to let the high-level methods like
+	// FetchMessage know that an error indeed occurred. If an error in run
+	// occurs, it will be non-block-sent to this unbuffered channel, where
+	// the high-level methods can select{} on it and notify the caller.
+	runError chan error
+
 	// reader stats are all made of atomic values, no need for synchronization.
 	once  uint32
 	stctx context.Context
@@ -69,6 +95,14 @@ type Reader struct {
 
 // useConsumerGroup indicates whether the Reader is part of a consumer group.
 func (r *Reader) useConsumerGroup() bool { return r.config.GroupID != "" }
+
+func (r *Reader) getTopics() []string {
+	if len(r.config.GroupTopics) > 0 {
+		return r.config.GroupTopics[:]
+	}
+
+	return []string{r.config.Topic}
+}
 
 // useSyncCommits indicates whether the Reader is configured to perform sync or
 // async commits.
@@ -87,18 +121,24 @@ func (r *Reader) unsubscribe() {
 	// another consumer to avoid such a race.
 }
 
-func (r *Reader) subscribe(assignments []PartitionAssignment) {
-	offsetsByPartition := make(map[int]int64)
-	for _, assignment := range assignments {
-		offsetsByPartition[assignment.ID] = assignment.Offset
+func (r *Reader) subscribe(allAssignments map[string][]PartitionAssignment) {
+	offsets := make(map[topicPartition]int64)
+	for topic, assignments := range allAssignments {
+		for _, assignment := range assignments {
+			key := topicPartition{
+				topic:     topic,
+				partition: int32(assignment.ID),
+			}
+			offsets[key] = assignment.Offset
+		}
 	}
 
 	r.mutex.Lock()
-	r.start(offsetsByPartition)
+	r.start(offsets)
 	r.mutex.Unlock()
 
 	r.withLogger(func(l Logger) {
-		l.Printf("subscribed to partitions: %+v", offsetsByPartition)
+		l.Printf("subscribed to topics and partitions: %+v", offsets)
 	})
 }
 
@@ -172,6 +212,25 @@ func (r *Reader) commitLoopImmediate(ctx context.Context, gen *Generation) {
 	for {
 		select {
 		case <-ctx.Done():
+			// drain the commit channel and prepare a single, final commit.
+			// the commit will combine any outstanding requests and the result
+			// will be sent back to all the callers of CommitMessages so that
+			// they can return.
+			var errchs []chan<- error
+			for hasCommits := true; hasCommits; {
+				select {
+				case req := <-r.commits:
+					offsets.merge(req.commits)
+					errchs = append(errchs, req.errch)
+				default:
+					hasCommits = false
+				}
+			}
+			err := r.commitOffsetsWithRetry(gen, offsets, defaultCommitRetries)
+			for _, errch := range errchs {
+				// NOTE : this will be a buffered channel and will not block.
+				errch <- err
+			}
 			return
 
 		case req := <-r.commits:
@@ -253,8 +312,15 @@ func (r *Reader) run(cg *ConsumerGroup) {
 	})
 
 	for {
-		gen, err := cg.Next(r.stctx)
-		if err != nil {
+		// Limit the number of attempts at waiting for the next
+		// consumer generation.
+		var err error
+		var gen *Generation
+		for attempt := 1; attempt <= r.config.MaxAttempts; attempt++ {
+			gen, err = cg.Next(r.stctx)
+			if err == nil {
+				break
+			}
 			if err == r.stctx.Err() {
 				return
 			}
@@ -262,12 +328,23 @@ func (r *Reader) run(cg *ConsumerGroup) {
 			r.withErrorLogger(func(l Logger) {
 				l.Printf(err.Error())
 			})
+			// Continue with next attempt...
+		}
+		if err != nil {
+			// All attempts have failed.
+			select {
+			case r.runError <- err:
+				// If somebody's receiving on the runError, let
+				// them know the error occurred.
+			default:
+				// Otherwise, don't block to allow healing.
+			}
 			continue
 		}
 
 		r.stats.rebalances.observe(1)
 
-		r.subscribe(gen.Assignments[r.config.Topic])
+		r.subscribe(gen.Assignments)
 
 		gen.Start(func(ctx context.Context) {
 			r.commitLoop(ctx, gen)
@@ -295,6 +372,11 @@ type ReaderConfig struct {
 	// Partition should NOT be specified e.g. 0
 	GroupID string
 
+	// GroupTopics allows specifying multiple topics, but can only be used in
+	// combination with GroupID, as it is a consumer-group feature. As such, if
+	// GroupID is set, then either Topic or GroupTopics must be defined.
+	GroupTopics []string
+
 	// The topic to read messages from.
 	Topic string
 
@@ -310,12 +392,25 @@ type ReaderConfig struct {
 	// set.
 	QueueCapacity int
 
-	// Min and max number of bytes to fetch from kafka in each request.
+	// MinBytes indicates to the broker the minimum batch size that the consumer
+	// will accept. Setting a high minimum when consuming from a low-volume topic
+	// may result in delayed delivery when the broker does not have enough data to
+	// satisfy the defined minimum.
+	//
+	// Default: 1
 	MinBytes int
+
+	// MaxBytes indicates to the broker the maximum batch size that the consumer
+	// will accept. The broker will truncate a message to satisfy this maximum, so
+	// choose a value that is high enough for your largest message size.
+	//
+	// Default: 1MB
 	MaxBytes int
 
 	// Maximum amount of time to wait for new data to come when fetching batches
 	// of messages from kafka.
+	//
+	// Default: 10s
 	MaxWait time.Duration
 
 	// ReadLagInterval sets the frequency at which the reader lag is updated.
@@ -433,13 +528,8 @@ type ReaderConfig struct {
 
 // Validate method validates ReaderConfig properties.
 func (config *ReaderConfig) Validate() error {
-
 	if len(config.Brokers) == 0 {
 		return errors.New("cannot create a new kafka reader with an empty list of broker addresses")
-	}
-
-	if len(config.Topic) == 0 {
-		return errors.New("cannot create a new kafka reader with an empty topic")
 	}
 
 	if config.Partition < 0 || config.Partition >= math.MaxInt32 {
@@ -454,8 +544,16 @@ func (config *ReaderConfig) Validate() error {
 		return errors.New(fmt.Sprintf("invalid negative maximum batch size (max = %d)", config.MaxBytes))
 	}
 
-	if config.GroupID != "" && config.Partition != 0 {
-		return errors.New("either Partition or GroupID may be specified, but not both")
+	if config.GroupID != "" {
+		if config.Partition != 0 {
+			return errors.New("either Partition or GroupID may be specified, but not both")
+		}
+
+		if len(config.Topic) == 0 && len(config.GroupTopics) == 0 {
+			return errors.New("either Topic or GroupTopics must be specified with GroupID")
+		}
+	} else if len(config.Topic) == 0 {
+		return errors.New("cannot create a new kafka reader with an empty topic")
 	}
 
 	if config.MinBytes > config.MaxBytes {
@@ -531,7 +629,6 @@ type readerStats struct {
 // NewReader creates and returns a new Reader configured with config.
 // The offset is initialized to FirstOffset.
 func NewReader(config ReaderConfig) *Reader {
-
 	if err := config.Validate(); err != nil {
 		panic(err)
 	}
@@ -554,7 +651,7 @@ func NewReader(config ReaderConfig) *Reader {
 	}
 
 	if config.MinBytes == 0 {
-		config.MinBytes = config.MaxBytes
+		config.MinBytes = defaultFetchMinBytes
 	}
 
 	if config.MaxWait == 0 {
@@ -619,14 +716,14 @@ func NewReader(config ReaderConfig) *Reader {
 		},
 		version: version,
 	}
-
 	if r.useConsumerGroup() {
 		r.done = make(chan struct{})
+		r.runError = make(chan error)
 		cg, err := NewConsumerGroup(ConsumerGroupConfig{
 			ID:                     r.config.GroupID,
 			Brokers:                r.config.Brokers,
 			Dialer:                 r.config.Dialer,
-			Topics:                 []string{r.config.Topic},
+			Topics:                 r.getTopics(),
 			GroupBalancers:         r.config.GroupBalancers,
 			HeartbeatInterval:      r.config.HeartbeatInterval,
 			PartitionWatchInterval: r.config.PartitionWatchInterval,
@@ -685,7 +782,11 @@ func (r *Reader) Close() error {
 // The method returns io.EOF to indicate that the reader has been closed.
 //
 // If consumer groups are used, ReadMessage will automatically commit the
-// offset when called.
+// offset when called. Note that this could result in an offset being committed
+// before the message is fully processed.
+//
+// If more fine grained control of when offsets are  committed is required, it
+// is recommended to use FetchMessage with CommitMessages instead.
 func (r *Reader) ReadMessage(ctx context.Context) (Message, error) {
 	m, err := r.FetchMessage(ctx)
 	if err != nil {
@@ -716,7 +817,7 @@ func (r *Reader) FetchMessage(ctx context.Context) (Message, error) {
 		r.mutex.Lock()
 
 		if !r.closed && r.version == 0 {
-			r.start(map[int]int64{r.config.Partition: r.offset})
+			r.start(r.getTopicPartitionOffset())
 		}
 
 		version := r.version
@@ -725,6 +826,9 @@ func (r *Reader) FetchMessage(ctx context.Context) (Message, error) {
 		select {
 		case <-ctx.Done():
 			return Message{}, ctx.Err()
+
+		case err := <-r.runError:
+			return Message{}, err
 
 		case m, ok := <-r.msgs:
 			if !ok {
@@ -762,13 +866,22 @@ func (r *Reader) FetchMessage(ctx context.Context) (Message, error) {
 // CommitMessages commits the list of messages passed as argument. The program
 // may pass a context to asynchronously cancel the commit operation when it was
 // configured to be blocking.
+//
+// Because kafka consumer groups track a single offset per partition, the
+// highest message offset passed to CommitMessages will cause all previous
+// messages to be committed. Applications need to account for these Kafka
+// limitations when committing messages, and maintain message ordering if they
+// need strong delivery guarantees. This property makes it valid to pass only
+// the last message seen to CommitMessages in order to move the offset of the
+// topic/partition it belonged to forward, effectively committing all previous
+// messages in the partition.
 func (r *Reader) CommitMessages(ctx context.Context, msgs ...Message) error {
 	if !r.useConsumerGroup() {
 		return errOnlyAvailableWithGroup
 	}
 
 	var errch <-chan error
-	var creq = commitRequest{
+	creq := commitRequest{
 		commits: makeCommits(msgs...),
 	}
 
@@ -927,7 +1040,7 @@ func (r *Reader) SetOffset(offset int64) error {
 		r.offset = offset
 
 		if r.version != 0 {
-			r.start(map[int]int64{r.config.Partition: r.offset})
+			r.start(r.getTopicPartitionOffset())
 		}
 
 		r.activateReadLag()
@@ -1006,6 +1119,11 @@ func (r *Reader) Stats() ReaderStats {
 	return stats
 }
 
+func (r *Reader) getTopicPartitionOffset() map[topicPartition]int64 {
+	key := topicPartition{topic: r.config.Topic, partition: int32(r.config.Partition)}
+	return map[topicPartition]int64{key: r.offset}
+}
+
 func (r *Reader) withLogger(do func(Logger)) {
 	if r.config.Logger != nil {
 		do(r.config.Logger)
@@ -1042,7 +1160,7 @@ func (r *Reader) readLag(ctx context.Context) {
 		if err != nil {
 			r.stats.errors.observe(1)
 			r.withErrorLogger(func(log Logger) {
-				log.Printf("kafka reader failed to read lag of partition %d of %s", r.config.Partition, r.config.Topic)
+				log.Printf("kafka reader failed to read lag of partition %d of %s: %s", r.config.Partition, r.config.Topic, err)
 			})
 		} else {
 			r.stats.lag.observe(lag)
@@ -1056,7 +1174,7 @@ func (r *Reader) readLag(ctx context.Context) {
 	}
 }
 
-func (r *Reader) start(offsetsByPartition map[int]int64) {
+func (r *Reader) start(offsetsByPartition map[topicPartition]int64) {
 	if r.closed {
 		// don't start child reader if parent Reader is closed
 		return
@@ -1069,8 +1187,8 @@ func (r *Reader) start(offsetsByPartition map[int]int64) {
 	r.version++
 
 	r.join.Add(len(offsetsByPartition))
-	for partition, offset := range offsetsByPartition {
-		go func(ctx context.Context, partition int, offset int64, join *sync.WaitGroup) {
+	for key, offset := range offsetsByPartition {
+		go func(ctx context.Context, key topicPartition, offset int64, join *sync.WaitGroup) {
 			defer join.Done()
 
 			(&reader{
@@ -1078,8 +1196,8 @@ func (r *Reader) start(offsetsByPartition map[int]int64) {
 				logger:          r.config.Logger,
 				errorLogger:     r.config.ErrorLogger,
 				brokers:         r.config.Brokers,
-				topic:           r.config.Topic,
-				partition:       partition,
+				topic:           key.topic,
+				partition:       int(key.partition),
 				minBytes:        r.config.MinBytes,
 				maxBytes:        r.config.MaxBytes,
 				maxWait:         r.config.MaxWait,
@@ -1091,7 +1209,7 @@ func (r *Reader) start(offsetsByPartition map[int]int64) {
 				isolationLevel:  r.config.IsolationLevel,
 				maxAttempts:     r.config.MaxAttempts,
 			}).run(ctx, offset)
-		}(ctx, partition, offset, &r.join)
+		}(ctx, key, offset, &r.join)
 	}
 }
 
@@ -1157,8 +1275,9 @@ func (r *reader) run(ctx context.Context, offset int64) {
 			})
 			continue
 		default:
-			// Wait 4 attempts before reporting the first errors, this helps
-			// mitigate situations where the kafka server is temporarily
+			// Perform a configured number of attempts before
+			// reporting first errors, this helps mitigate
+			// situations where the kafka server is temporarily
 			// unavailable.
 			if attempt >= r.maxAttempts {
 				r.sendError(ctx, err)
@@ -1191,12 +1310,14 @@ func (r *reader) run(ctx context.Context, offset int64) {
 			switch offset, err = r.read(ctx, offset, conn); err {
 			case nil:
 				errcount = 0
+				continue
 			case io.EOF:
 				// done with this batch of messages...carry on.  note that this
 				// block relies on the batch repackaging real io.EOF errors as
 				// io.UnexpectedEOF.  otherwise, we would end up swallowing real
 				// errors here.
 				errcount = 0
+				continue
 			case UnknownTopicOrPartition:
 				r.withErrorLogger(func(log Logger) {
 					log.Printf("failed to read from current broker for partition %d of %s at offset %d, topic or parition not found on this broker, %v", r.partition, r.topic, offset, r.brokers)
@@ -1231,7 +1352,6 @@ func (r *reader) run(ctx context.Context, offset int64) {
 
 			case OffsetOutOfRange:
 				first, last, err := r.readOffsets(conn)
-
 				if err != nil {
 					r.withErrorLogger(func(log Logger) {
 						log.Printf("the kafka reader got an error while attempting to determine whether it was reading before the first offset or after the last offset of partition %d of %s: %s", r.partition, r.topic, err)
@@ -1291,7 +1411,7 @@ func (r *reader) run(ctx context.Context, offset int64) {
 
 func (r *reader) initialize(ctx context.Context, offset int64) (conn *Conn, start int64, err error) {
 	for i := 0; i != len(r.brokers) && conn == nil; i++ {
-		var broker = r.brokers[i]
+		broker := r.brokers[i]
 		var first, last int64
 
 		t0 := time.Now()
@@ -1440,7 +1560,7 @@ func (r *reader) withErrorLogger(do func(Logger)) {
 // extractTopics returns the unique list of topics represented by the set of
 // provided members
 func extractTopics(members []GroupMember) []string {
-	var visited = map[string]struct{}{}
+	visited := map[string]struct{}{}
 	var topics []string
 
 	for _, member := range members {

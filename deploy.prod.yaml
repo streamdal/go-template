@@ -34,6 +34,12 @@ spec:
               value: "false"
             - name: BACKEND_STORAGE_ENABLE_TLS
               value: "true"
+            - name: NATS_URL
+              value: "{{vault:kubernetes-prod/nats:url}}"
+            - name: NATS_USE_TLS
+              value: "true"
+            - name: NATS_TLS_CA_FILE
+              value: "{{vault:kubernetes-prod/global:ca.pem}}"
             - name: DD_AGENT_HOST
               valueFrom:
                 fieldRef:

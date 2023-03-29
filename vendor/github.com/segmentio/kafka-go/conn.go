@@ -20,23 +20,6 @@ var (
 	errInvalidWritePartition = errors.New("writes must NOT set Partition on kafka.Message")
 )
 
-// Broker carries the metadata associated with a kafka broker.
-type Broker struct {
-	Host string
-	Port int
-	ID   int
-	Rack string
-}
-
-// Partition carries the metadata associated with a kafka partition.
-type Partition struct {
-	Topic    string
-	Leader   Broker
-	Replicas []Broker
-	Isr      []Broker
-	ID       int
-}
-
 // Conn represents a connection to a kafka broker.
 //
 // Instances of Conn are safe to use concurrently from multiple goroutines.
@@ -70,6 +53,8 @@ type Conn struct {
 	partition     int32
 	fetchMaxBytes int32
 	fetchMinSize  int32
+	broker        int32
+	rack          string
 
 	// correlation ID generator (synchronized on wlock)
 	correlationID int32
@@ -104,6 +89,8 @@ type ConnConfig struct {
 	ClientID  string
 	Topic     string
 	Partition int
+	Broker    int
+	Rack      string
 
 	// The transactional id to use for transactional delivery. Idempotent
 	// deliver should be enabled if transactional id is configured.
@@ -114,13 +101,29 @@ type ConnConfig struct {
 
 // ReadBatchConfig is a configuration object used for reading batches of messages.
 type ReadBatchConfig struct {
+	// MinBytes indicates to the broker the minimum batch size that the consumer
+	// will accept. Setting a high minimum when consuming from a low-volume topic
+	// may result in delayed delivery when the broker does not have enough data to
+	// satisfy the defined minimum.
 	MinBytes int
+
+	// MaxBytes indicates to the broker the maximum batch size that the consumer
+	// will accept. The broker will truncate a message to satisfy this maximum, so
+	// choose a value that is high enough for your largest message size.
 	MaxBytes int
 
 	// IsolationLevel controls the visibility of transactional records.
 	// ReadUncommitted makes all records visible. With ReadCommitted only
 	// non-transactional and committed records are visible.
 	IsolationLevel IsolationLevel
+
+	// MaxWait is the amount of time for the broker while waiting to hit the
+	// min/max byte targets.  This setting is independent of any network-level
+	// timeouts or deadlines.
+	//
+	// For backward compatibility, when this field is left zero, kafka-go will
+	// infer the max wait from the connection's read deadline.
+	MaxWait time.Duration
 }
 
 type IsolationLevel int8
@@ -175,6 +178,8 @@ func NewConnWith(conn net.Conn, config ConnConfig) *Conn {
 		clientID:        config.ClientID,
 		topic:           config.Topic,
 		partition:       int32(config.Partition),
+		broker:          int32(config.Broker),
+		rack:            config.Rack,
 		offset:          FirstOffset,
 		requiredAcks:    -1,
 		transactionalID: emptyToNullable(config.TransactionalID),
@@ -229,6 +234,19 @@ func (c *Conn) loadVersions() (apiVersionMap, error) {
 
 	c.apiVersions.Store(v)
 	return v, nil
+}
+
+// Broker returns a Broker value representing the kafka broker that this
+// connection was established to.
+func (c *Conn) Broker() Broker {
+	addr := c.conn.RemoteAddr()
+	host, port, _ := splitHostPortNumber(addr.String())
+	return Broker{
+		Host: host,
+		Port: port,
+		ID:   int(c.broker),
+		Rack: c.rack,
+	}
 }
 
 // Controller requests kafka for the current controller and returns its URL
@@ -293,34 +311,6 @@ func (c *Conn) DeleteTopics(topics ...string) error {
 		Topics: topics,
 	})
 	return err
-}
-
-// describeGroups retrieves the specified groups
-//
-// See http://kafka.apache.org/protocol.html#The_Messages_DescribeGroups
-func (c *Conn) describeGroups(request describeGroupsRequestV0) (describeGroupsResponseV0, error) {
-	var response describeGroupsResponseV0
-
-	err := c.readOperation(
-		func(deadline time.Time, id int32) error {
-			return c.writeRequest(describeGroups, v0, id, request)
-		},
-		func(deadline time.Time, size int) error {
-			return expectZeroSize(func() (remain int, err error) {
-				return (&response).readFrom(&c.rbuf, size)
-			}())
-		},
-	)
-	if err != nil {
-		return describeGroupsResponseV0{}, err
-	}
-	for _, group := range response.Groups {
-		if group.ErrorCode != 0 {
-			return describeGroupsResponseV0{}, Error(group.ErrorCode)
-		}
-	}
-
-	return response, nil
 }
 
 // findCoordinator finds the coordinator for the specified group or transaction
@@ -790,7 +780,20 @@ func (c *Conn) ReadBatchWith(cfg ReadBatchConfig) *Batch {
 
 	id, err := c.doRequest(&c.rdeadline, func(deadline time.Time, id int32) error {
 		now := time.Now()
-		deadline = adjustDeadlineForRTT(deadline, now, defaultRTT)
+		var timeout time.Duration
+		if cfg.MaxWait > 0 {
+			// explicitly-configured case: no changes are made to the deadline,
+			// and the timeout is sent exactly as specified.
+			timeout = cfg.MaxWait
+		} else {
+			// default case: use the original logic to adjust the conn's
+			// deadline.T
+			deadline = adjustDeadlineForRTT(deadline, now, defaultRTT)
+			timeout = deadlineToTimeout(deadline, now)
+		}
+		// save this variable outside of the closure for later use in detecting
+		// truncated messages.
+		adjustedDeadline = deadline
 		switch fetchVersion {
 		case v10:
 			return c.wb.writeFetchRequestV10(
@@ -801,7 +804,7 @@ func (c *Conn) ReadBatchWith(cfg ReadBatchConfig) *Batch {
 				offset,
 				cfg.MinBytes,
 				cfg.MaxBytes+int(c.fetchMinSize),
-				deadlineToTimeout(deadline, now),
+				timeout,
 				int8(cfg.IsolationLevel),
 			)
 		case v5:
@@ -813,7 +816,7 @@ func (c *Conn) ReadBatchWith(cfg ReadBatchConfig) *Batch {
 				offset,
 				cfg.MinBytes,
 				cfg.MaxBytes+int(c.fetchMinSize),
-				deadlineToTimeout(deadline, now),
+				timeout,
 				int8(cfg.IsolationLevel),
 			)
 		default:
@@ -825,7 +828,7 @@ func (c *Conn) ReadBatchWith(cfg ReadBatchConfig) *Batch {
 				offset,
 				cfg.MinBytes,
 				cfg.MaxBytes+int(c.fetchMinSize),
-				deadlineToTimeout(deadline, now),
+				timeout,
 			)
 		}
 	})
@@ -869,7 +872,7 @@ func (c *Conn) ReadBatchWith(cfg ReadBatchConfig) *Batch {
 		conn:          c,
 		msgs:          msgs,
 		deadline:      adjustedDeadline,
-		throttle:      duration(throttle),
+		throttle:      makeDuration(throttle),
 		lock:          lock,
 		topic:         c.topic,          // topic is copied to Batch to prevent race with Batch.close
 		partition:     int(c.partition), // partition is copied to Batch to prevent race with Batch.close
@@ -989,14 +992,6 @@ func (c *Conn) ReadPartitions(topics ...string) (partitions []Partition, err err
 				}
 			}
 
-			makeBrokers := func(ids ...int32) []Broker {
-				b := make([]Broker, len(ids))
-				for i, id := range ids {
-					b[i] = brokers[id]
-				}
-				return b
-			}
-
 			for _, t := range res.Topics {
 				if t.TopicErrorCode != 0 && (c.topic == "" || t.TopicName == c.topic) {
 					// We only report errors if they happened for the topic of
@@ -1008,8 +1003,8 @@ func (c *Conn) ReadPartitions(topics ...string) (partitions []Partition, err err
 					partitions = append(partitions, Partition{
 						Topic:    t.TopicName,
 						Leader:   brokers[p.Leader],
-						Replicas: makeBrokers(p.Replicas...),
-						Isr:      makeBrokers(p.Isr...),
+						Replicas: makeBrokers(brokers, p.Replicas...),
+						Isr:      makeBrokers(brokers, p.Isr...),
 						ID:       int(p.PartitionID),
 					})
 				}
@@ -1018,6 +1013,16 @@ func (c *Conn) ReadPartitions(topics ...string) (partitions []Partition, err err
 		},
 	)
 	return
+}
+
+func makeBrokers(brokers map[int32]Broker, ids ...int32) []Broker {
+	b := make([]Broker, 0, len(ids))
+	for _, id := range ids {
+		if br, ok := brokers[id]; ok {
+			b = append(b, br)
+		}
+	}
+	return b
 }
 
 // Write writes a message to the kafka broker that this connection was
@@ -1383,7 +1388,7 @@ func (c *Conn) ApiVersions() ([]ApiVersion, error) {
 
 	if deadline.deadline().IsZero() {
 		// ApiVersions is called automatically when API version negotiation
-		// needs to happen, so we are not garanteed that a read deadline has
+		// needs to happen, so we are not guaranteed that a read deadline has
 		// been set yet. Fallback to use the write deadline in case it was
 		// set, for example when version negotiation is initiated during a
 		// produce request.

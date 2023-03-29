@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -13,18 +12,10 @@ const (
 )
 
 type Config struct {
-	ListenAddress          string   `envconfig:"LISTEN_ADDRESS" default:":8282"`
-	HealthFreqSec          int      `envconfig:"HEALTH_FREQ_SEC" default:"60"`
-	EnvName                string   `envconfig:"ENV_NAME" default:"local"`
-	ServiceName            string   `envconfig:"SERVICE_NAME" default:"go-template"`
-	EtcdEndpoints          []string `envconfig:"ETCD_ENDPOINTS"default:"localhost:2379"`
-	EtcdDialTimeoutSeconds int      `envconfig:"ETCD_DIAL_TIMEOUT_SECONDS" default:"5"`
-	EtcdUseTLS             bool     `envconfig:"ETCD_USE_TLS" default:"false"`
-	EtcdTLSCACert          string   `envconfig:"ETCD_TLS_CA_CERT"`
-	EtcdTLSClientCert      string   `envconfig:"ETCD_TLS_CLIENT_CERT"`
-	EtcdTLSClientKey       string   `envconfig:"ETCD_TLS_CLIENT_KEY"`
-	EtcdUsername           string   `envconfig:"ETCD_USERNAME"`
-	EtcdPassword           string   `envconfig:"ETCD_PASSWORD"`
+	ListenAddress string `envconfig:"LISTEN_ADDRESS" default:":8282"`
+	HealthFreqSec int    `envconfig:"HEALTH_FREQ_SEC" default:"60"`
+	EnvName       string `envconfig:"ENV_NAME" default:"local"`
+	ServiceName   string `envconfig:"SERVICE_NAME" default:"go-template"`
 
 	// Queue for _internal_ events
 	ISBDedicatedURLs              []string `envconfig:"ISB_DEDICATED_URL" default:"amqp://localhost"`
@@ -75,6 +66,13 @@ type Config struct {
 	BackendStorageUser      string `envconfig:"BACKEND_STORAGE_USER" default:"postgres"`
 	BackendStoragePass      string `envconfig:"BACKEND_STORAGE_PASS"`
 	BackendStorageEnableTLS bool   `envconfig:"BACKEND_STORAGE_ENABLE_TLS" default:"false"`
+
+	NATSURL           []string `envconfig:"NATS_URL" default:"localhost:4222"`
+	NATSUseTLS        bool     `envconfig:"NATS_USE_TLS" default:"false"`
+	NATSTLSSkipVerify bool     `envconfig:"NATS_TLS_SKIP_VERIFY" default:"false"`
+	NATSTLSCertFile   string   `envconfig:"NATS_TLS_CERT_FILE"`
+	NATSTLSKeyFile    string   `envconfig:"NATS_TLS_KEY_FILE"`
+	NATSTLSCaFile     string   `envconfig:"NATS_TLS_CA_FILE"`
 }
 
 func New() *Config {
@@ -84,20 +82,6 @@ func New() *Config {
 func (c *Config) LoadEnvVars() error {
 	if err := envconfig.Process(EnvConfigPrefix, c); err != nil {
 		return fmt.Errorf("unable to fetch env vars: %s", err)
-	}
-
-	if c.EtcdUseTLS {
-		if c.EtcdTLSCACert == "" {
-			return errors.New("ETCD_TLS_CA_CERT must be set when ETCD_USE_TLS set to true")
-		}
-
-		if c.EtcdTLSClientCert == "" {
-			return errors.New("ETCD_TLS_CLIENT_CERT must be set when ETCD_USE_TLS set to true")
-		}
-
-		if c.EtcdTLSClientKey == "" {
-			return errors.New("ETCD_TLS_CLIENT_KEY must be set when ETCD_USE_TLS set to true")
-		}
 	}
 
 	return nil

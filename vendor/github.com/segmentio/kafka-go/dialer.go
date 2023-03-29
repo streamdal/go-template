@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -17,6 +18,13 @@ import (
 type Dialer struct {
 	// Unique identifier for client connections established by this Dialer.
 	ClientID string
+
+	// Optionally specifies the function that the dialer uses to establish
+	// network connections. If nil, net.(*Dialer).DialContext is used instead.
+	//
+	// When DialFunc is set, LocalAddr, DualStack, FallbackDelay, and KeepAlive
+	// are ignored.
+	DialFunc func(ctx context.Context, network string, address string) (net.Conn, error)
 
 	// Timeout is the maximum amount of time a dial will wait for a connect to
 	// complete. If Deadline is also set, it may fail earlier.
@@ -58,7 +66,13 @@ type Dialer struct {
 	// support keep-alives ignore this field.
 	KeepAlive time.Duration
 
-	// Resolver optionally specifies an alternate resolver to use.
+	// Resolver optionally gives a hook to convert the broker address into an
+	// alternate host or IP address which is useful for custom service discovery.
+	// If a custom resolver returns any possible hosts, the first one will be
+	// used and the original discarded. If a port number is included with the
+	// resolved host, it will only be used if a port number was not previously
+	// specified. If no port is specified or resolved, the default of 9092 will be
+	// used.
 	Resolver Resolver
 
 	// TLS enables Dialer to open secure connections.  If nil, standard net.Conn
@@ -130,6 +144,8 @@ func (d *Dialer) DialPartition(ctx context.Context, network string, address stri
 		ClientID:        d.ClientID,
 		Topic:           partition.Topic,
 		Partition:       partition.ID,
+		Broker:          partition.Leader.ID,
+		Rack:            partition.Leader.Rack,
 		TransactionalID: d.TransactionalID,
 	})
 }
@@ -266,7 +282,15 @@ func (d *Dialer) connect(ctx context.Context, network, address string, connCfg C
 	conn := NewConnWith(c, connCfg)
 
 	if d.SASLMechanism != nil {
-		if err := d.authenticateSASL(ctx, conn); err != nil {
+		host, port, err := splitHostPortNumber(address)
+		if err != nil {
+			return nil, err
+		}
+		metadata := &sasl.Metadata{
+			Host: host,
+			Port: port,
+		}
+		if err := d.authenticateSASL(sasl.WithMetadata(ctx, metadata), conn); err != nil {
 			_ = conn.Close()
 			return nil, err
 		}
@@ -313,28 +337,23 @@ func (d *Dialer) authenticateSASL(ctx context.Context, conn *Conn) error {
 	return nil
 }
 
-func (d *Dialer) dialContext(ctx context.Context, network string, address string) (net.Conn, error) {
-	if r := d.Resolver; r != nil {
-		host, port := splitHostPort(address)
-		addrs, err := r.LookupHost(ctx, host)
-		if err != nil {
-			return nil, err
-		}
-		if len(addrs) != 0 {
-			address = addrs[0]
-		}
-		if len(port) != 0 {
-			address, _ = splitHostPort(address)
-			address = net.JoinHostPort(address, port)
-		}
+func (d *Dialer) dialContext(ctx context.Context, network string, addr string) (net.Conn, error) {
+	address, err := lookupHost(ctx, addr, d.Resolver)
+	if err != nil {
+		return nil, err
 	}
 
-	conn, err := (&net.Dialer{
-		LocalAddr:     d.LocalAddr,
-		DualStack:     d.DualStack,
-		FallbackDelay: d.FallbackDelay,
-		KeepAlive:     d.KeepAlive,
-	}).DialContext(ctx, network, address)
+	dial := d.DialFunc
+	if dial == nil {
+		dial = (&net.Dialer{
+			LocalAddr:     d.LocalAddr,
+			DualStack:     d.DualStack,
+			FallbackDelay: d.FallbackDelay,
+			KeepAlive:     d.KeepAlive,
+		}).DialContext
+	}
+
+	conn, err := dial(ctx, network, address)
 	if err != nil {
 		return nil, err
 	}
@@ -395,14 +414,6 @@ func LookupPartitions(ctx context.Context, network string, address string, topic
 	return DefaultDialer.LookupPartitions(ctx, network, address, topic)
 }
 
-// The Resolver interface is used as an abstraction to provide service discovery
-// of the hosts of a kafka cluster.
-type Resolver interface {
-	// LookupHost looks up the given host using the local resolver.
-	// It returns a slice of that host's addresses.
-	LookupHost(ctx context.Context, host string) (addrs []string, err error)
-}
-
 func sleep(ctx context.Context, duration time.Duration) bool {
 	if duration == 0 {
 		select {
@@ -430,10 +441,52 @@ func backoff(attempt int, min time.Duration, max time.Duration) time.Duration {
 	return d
 }
 
+func canonicalAddress(s string) string {
+	return net.JoinHostPort(splitHostPort(s))
+}
+
 func splitHostPort(s string) (host string, port string) {
 	host, port, _ = net.SplitHostPort(s)
 	if len(host) == 0 && len(port) == 0 {
 		host = s
+		port = "9092"
 	}
 	return
+}
+
+func splitHostPortNumber(s string) (host string, portNumber int, err error) {
+	host, port := splitHostPort(s)
+	portNumber, err = strconv.Atoi(port)
+	if err != nil {
+		return host, 0, fmt.Errorf("%s: %w", s, err)
+	}
+	return host, portNumber, nil
+}
+
+func lookupHost(ctx context.Context, address string, resolver Resolver) (string, error) {
+	host, port := splitHostPort(address)
+
+	if resolver != nil {
+		resolved, err := resolver.LookupHost(ctx, host)
+		if err != nil {
+			return "", err
+		}
+
+		// if the resolver doesn't return anything, we'll fall back on the provided
+		// address instead
+		if len(resolved) > 0 {
+			resolvedHost, resolvedPort := splitHostPort(resolved[0])
+
+			// we'll always prefer the resolved host
+			host = resolvedHost
+
+			// in the case of port though, the provided address takes priority, and we
+			// only use the resolved address to set the port when not specified
+			if port == "" {
+				port = resolvedPort
+			}
+		}
+	}
+
+	return net.JoinHostPort(host, port), nil
 }

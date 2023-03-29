@@ -1,7 +1,7 @@
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
-// Copyright 2016-2020 Datadog, Inc.
+// Copyright 2016 Datadog, Inc.
 
 package tracer
 
@@ -20,6 +20,7 @@ import (
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext"
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/log"
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/samplernames"
 
 	"golang.org/x/time/rate"
 )
@@ -150,9 +151,9 @@ func (ps *prioritySampler) getRate(spn *span) float64 {
 func (ps *prioritySampler) apply(spn *span) {
 	rate := ps.getRate(spn)
 	if sampledByRate(spn.TraceID, rate) {
-		spn.SetTag(ext.SamplingPriority, ext.PriorityAutoKeep)
+		spn.setSamplingPriority(ext.PriorityAutoKeep, samplernames.AgentRate, rate)
 	} else {
-		spn.SetTag(ext.SamplingPriority, ext.PriorityAutoReject)
+		spn.setSamplingPriority(ext.PriorityAutoReject, samplernames.AgentRate, rate)
 	}
 	spn.SetTag(keySamplingPriorityRate, rate)
 }
@@ -311,15 +312,15 @@ func (rs *rulesSampler) apply(span *span) bool {
 func (rs *rulesSampler) applyRate(span *span, rate float64, now time.Time) {
 	span.SetTag(keyRulesSamplerAppliedRate, rate)
 	if !sampledByRate(span.TraceID, rate) {
-		span.SetTag(ext.SamplingPriority, ext.PriorityAutoReject)
+		span.setSamplingPriority(ext.PriorityUserReject, samplernames.RuleRate, rate)
 		return
 	}
 
 	sampled, rate := rs.limiter.allowOne(now)
 	if sampled {
-		span.SetTag(ext.SamplingPriority, ext.PriorityAutoKeep)
+		span.setSamplingPriority(ext.PriorityUserKeep, samplernames.RuleRate, rate)
 	} else {
-		span.SetTag(ext.SamplingPriority, ext.PriorityAutoReject)
+		span.setSamplingPriority(ext.PriorityUserReject, samplernames.RuleRate, rate)
 	}
 	span.SetTag(keyRulesSamplerLimiterRate, rate)
 }
@@ -412,11 +413,12 @@ func (sr *SamplingRule) MarshalJSON() ([]byte, error) {
 type rateLimiter struct {
 	limiter *rate.Limiter
 
-	mu       sync.Mutex // guards below fields
-	prevTime time.Time  // time at which prevRate was set
-	prevRate float64    // previous second's rate.
-	allowed  int        // number of spans allowed in the current period
-	seen     int        // number of spans seen in the current period
+	mu          sync.Mutex // guards below fields
+	prevTime    time.Time  // time at which prevAllowed and prevSeen were set
+	allowed     float64    // number of spans allowed in the current period
+	seen        float64    // number of spans seen in the current period
+	prevAllowed float64    // number of spans allowed in the previous period
+	prevSeen    float64    // number of spans seen in the previous period
 }
 
 // allowOne returns the rate limiter's decision to allow the span to be sampled, and the
@@ -428,11 +430,13 @@ func (r *rateLimiter) allowOne(now time.Time) (bool, float64) {
 	if d := now.Sub(r.prevTime); d >= time.Second {
 		// enough time has passed to reset the counters
 		if d.Truncate(time.Second) == time.Second && r.seen > 0 {
-			// exactly one second, so update prevRate
-			r.prevRate = float64(r.allowed) / float64(r.seen)
+			// exactly one second, so update prev
+			r.prevAllowed = r.allowed
+			r.prevSeen = r.seen
 		} else {
 			// more than one second, so reset previous rate
-			r.prevRate = 0.0
+			r.prevAllowed = 0
+			r.prevSeen = 0
 		}
 		r.prevTime = now
 		r.allowed = 0
@@ -445,9 +449,6 @@ func (r *rateLimiter) allowOne(now time.Time) (bool, float64) {
 		r.allowed++
 		sampled = true
 	}
-	// TODO(x): This algorithm is wrong. When there were no spans in the previous period prevRate will be 0.0
-	// and the resulting effective rate will be half of the actual rate. We should fix the algorithm by using
-	// a similar method as we do in the Datadog Agent in the rate limiter (using a decay period).
-	er := (r.prevRate + (float64(r.allowed) / float64(r.seen))) / 2.0
+	er := (r.prevAllowed + r.allowed) / (r.prevSeen + r.seen)
 	return sampled, er
 }

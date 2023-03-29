@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -61,6 +62,10 @@ func main() {
 	d, err := deps.New(cfg)
 	if err != nil {
 		log.WithError(err).Fatal("Could not setup dependencies")
+	}
+
+	if err := d.PreCreateBuckets(context.Background()); err != nil {
+		log.WithError(err).Fatalln("unable to create NATS buckets")
 	}
 
 	log = log.WithField("environment", cfg.EnvName)

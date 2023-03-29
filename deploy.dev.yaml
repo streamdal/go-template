@@ -32,6 +32,12 @@ spec:
               value: "dev"
             - name: DEBUG
               value: "true"
+            - name: NATS_URL
+              value: "{{vault:kubernetes-dev/nats:url}}"
+            - name: NATS_USE_TLS
+              value: "false"
+            - name: NATS_TLS_CA_FILE
+              value: "{{vault:kubernetes-dev/global:ca.pem}}"
             - name: DD_AGENT_HOST
               valueFrom:
                 fieldRef:

@@ -17,16 +17,15 @@ services:
       - ./backend-data/rabbitmq:/var/lib/rabbitmq
     container_name: rabbitmq
 
-  etcd:
-    image: bitnami/etcd:3
+  natsjs:
+    image: nats:2.8.1-alpine3.15
     ports:
-      - 2379:2379
-      - 2380:2380
-    environment:
-      - ALLOW_NONE_AUTHENTICATION=yes
+      - "4222:4222" # NATS Port
+      - "6222:6222"
+      - "8222:8222" # HTTP Monitor
     volumes:
-      - ./backend-data/etcd:/bitnami
-    container_name: etcd
+      - ${PWD}/backend-data/jetstream:/data/jetstream
+      - ${PWD}/assets/nats-server.conf:/etc/nats/nats-server.conf
 
   zookeeper:
     image: antrea/confluentinc-zookeeper:6.2.0
