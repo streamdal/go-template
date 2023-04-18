@@ -86,7 +86,7 @@ type INatty interface {
 
 	// CreateBucket will attempt to create a new bucket. Will return an error if
 	// bucket already exists.
-	CreateBucket(ctx context.Context, bucket string, ttl time.Duration, description ...string) error
+	CreateBucket(ctx context.Context, bucket string, ttl time.Duration, replicas int, description ...string) error
 
 	// DeleteBucket will delete the specified bucket
 	DeleteBucket(ctx context.Context, bucket string) error

@@ -95,11 +95,15 @@ github.com/aws/smithy-go v1.0.0/go.mod h1:EzMw8dbp/YJL4A5/sbhGddag+NPT7q084agLbB
 github.com/aws/smithy-go v1.11.0/go.mod h1:3xHYmszWVx2c0kIwQeEVf9uSm4fYZt67FBJnwub1bgM=
 github.com/batchcorp/natty v0.0.30 h1:Kc9pEgmlg5T0SzrKKAY3CR/pMN8/EnVGUIUDSYJTMDg=
 github.com/batchcorp/natty v0.0.30/go.mod h1:c/OOBkrv+Vu6Xk4NZK3GlVwlowu0cuqnY24I4YSEVlo=
+github.com/batchcorp/natty v0.0.31 h1:jlK/VWeRgVMEDFtB/Hu08VaidBmdKzkLOcT40i97Ypk=
+github.com/batchcorp/natty v0.0.31/go.mod h1:c/OOBkrv+Vu6Xk4NZK3GlVwlowu0cuqnY24I4YSEVlo=
 github.com/batchcorp/rabbit v0.1.19 h1:YVt/6sa4OrJRbWhy9ee+Tj9Er0eRrbVdQEXJF/uXt4s=
 github.com/batchcorp/rabbit v0.1.19/go.mod h1:oZjt3VItqJzwMKMhfqhneNV/uXvpNG7HzDWzHRnZciw=
 github.com/batchcorp/schemas v0.1.8/go.mod h1:OS0jIg50R8wrMJAVwOEirnvpyPKnJlVadifqH4LJlD4=
 github.com/batchcorp/schemas v0.2.116 h1:+NJ03kfIxs0c0dAXusCvRvvaG9wT1joQYpHla995XBQ=
 github.com/batchcorp/schemas v0.2.116/go.mod h1:R6rjH3b0egODh995q5qwGAfQ5fssAPeDf82gTGZS6d4=
+github.com/batchcorp/schemas v0.2.297 h1:2sF4rEdyPiHer3zKNE83wsSNH3aZa679Y2kXq3DuGk4=
+github.com/batchcorp/schemas v0.2.297/go.mod h1:R6rjH3b0egODh995q5qwGAfQ5fssAPeDf82gTGZS6d4=
 github.com/batchcorp/schemas/util/publish v0.0.0-20200622021112-903044310a85/go.mod h1:zD8BqPOqqGw2wWhGrJx8CguDKKuOPGo1TXOuz5b4OR4=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=

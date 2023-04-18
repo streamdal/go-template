@@ -14,6 +14,7 @@ import (
 const (
 	DefaultAsLeaderBucketTTL              = time.Second * 10
 	DefaultAsLeaderElectionLooperInterval = time.Second
+	DefaultAsLeaderReplicaCount           = 1
 )
 
 var (
@@ -41,6 +42,9 @@ type AsLeaderConfig struct {
 
 	// BucketTTL specifies the TTL policy the bucket should use (optional)
 	BucketTTL time.Duration
+
+	// ReplicaCount specifies the number of replicas the bucket should use (optional, default 1)
+	ReplicaCount int
 }
 
 func (n *Natty) GetLeader(ctx context.Context, bucketName, keyName string) (string, error) {
@@ -73,7 +77,7 @@ func (n *Natty) AsLeader(ctx context.Context, cfg AsLeaderConfig, f func() error
 	}
 
 	// Attempt to create bucket; if bucket exists, verify that TTL matches
-	if err := n.CreateBucket(ctx, cfg.Bucket, cfg.BucketTTL, cfg.Description); err != nil {
+	if err := n.CreateBucket(ctx, cfg.Bucket, cfg.BucketTTL, cfg.ReplicaCount, cfg.Description); err != nil {
 		if strings.Contains(err.Error(), "stream name already in use") {
 			n.log.Debug("bucket exists, checking if ttl matches")
 
@@ -261,6 +265,10 @@ func validateAsLeaderArgs(cfg *AsLeaderConfig, f func() error) error {
 
 	if cfg.NodeName == "" {
 		return errors.New("NodeName is required")
+	}
+
+	if cfg.ReplicaCount == 0 {
+		cfg.ReplicaCount = DefaultAsLeaderReplicaCount
 	}
 
 	if f == nil {

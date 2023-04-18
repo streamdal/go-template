@@ -2,6 +2,7 @@ package natty
 
 import (
 	"context"
+	"regexp"
 	"sync"
 	"time"
 
@@ -133,10 +134,15 @@ func (n *Natty) DeleteBucket(_ context.Context, bucket string) error {
 
 // CreateBucket creates a bucket; returns an error if it already exists.
 // Context usage not supported by NATS kv (yet).
-func (n *Natty) CreateBucket(_ context.Context, name string, ttl time.Duration, description ...string) error {
+func (n *Natty) CreateBucket(_ context.Context, name string, ttl time.Duration, replicaCount int, description ...string) error {
+	if err := validateCreateBucket(name, ttl, replicaCount); err != nil {
+		return errors.Wrap(err, "unable to validate args")
+	}
+
 	cfg := &nats.KeyValueConfig{
-		Bucket: name,
-		TTL:    ttl,
+		Bucket:   name,
+		TTL:      ttl,
+		Replicas: replicaCount,
 	}
 
 	if len(description) > 0 {
@@ -149,6 +155,23 @@ func (n *Natty) CreateBucket(_ context.Context, name string, ttl time.Duration, 
 	}
 
 	n.kvMap.Put(name, kv)
+
+	return nil
+}
+
+func validateCreateBucket(name string, _ time.Duration, replicaCount int) error {
+	if name == "" {
+		return errors.New("bucket name cannot be empty")
+	}
+
+	regex := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	if !regex.MatchString(name) {
+		return errors.New("bucket name can only contain alphanumeric, dash or underscore characters")
+	}
+
+	if replicaCount < 1 {
+		return errors.New("replicaCount must be greater than 0")
+	}
 
 	return nil
 }

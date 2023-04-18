@@ -5,9 +5,9 @@ go 1.18
 require (
 	github.com/InVisionApp/go-health v2.1.0+incompatible
 	github.com/InVisionApp/go-logger v1.0.1
-	github.com/batchcorp/natty v0.0.30
+	github.com/batchcorp/natty v0.0.31
 	github.com/batchcorp/rabbit v0.1.19
-	github.com/batchcorp/schemas v0.2.116
+	github.com/batchcorp/schemas v0.2.297
 	github.com/golang/protobuf v1.5.2
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/jmoiron/sqlx v1.2.0
