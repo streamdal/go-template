@@ -67,12 +67,13 @@ type Config struct {
 	BackendStoragePass      string `envconfig:"BACKEND_STORAGE_PASS"`
 	BackendStorageEnableTLS bool   `envconfig:"BACKEND_STORAGE_ENABLE_TLS" default:"false"`
 
-	NATSURL           []string `envconfig:"NATS_URL" default:"localhost:4222"`
-	NATSUseTLS        bool     `envconfig:"NATS_USE_TLS" default:"false"`
-	NATSTLSSkipVerify bool     `envconfig:"NATS_TLS_SKIP_VERIFY" default:"false"`
-	NATSTLSCertFile   string   `envconfig:"NATS_TLS_CERT_FILE"`
-	NATSTLSKeyFile    string   `envconfig:"NATS_TLS_KEY_FILE"`
-	NATSTLSCaFile     string   `envconfig:"NATS_TLS_CA_FILE"`
+	NATSURL               []string `envconfig:"NATS_URL" default:"localhost:4222"`
+	NATSUseTLS            bool     `envconfig:"NATS_USE_TLS" default:"false"`
+	NATSTLSSkipVerify     bool     `envconfig:"NATS_TLS_SKIP_VERIFY" default:"false"`
+	NATSTLSCertFile       string   `envconfig:"NATS_TLS_CERT_FILE"`
+	NATSTLSKeyFile        string   `envconfig:"NATS_TLS_KEY_FILE"`
+	NATSTLSCaFile         string   `envconfig:"NATS_TLS_CA_FILE"`
+	NATSNumBucketReplicas int      `envconfig:"NATS_NUM_BUCKET_REPLICAS"  default:"3"`
 }
 
 func New() *Config {

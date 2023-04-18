@@ -48,7 +48,7 @@ run:
 .PHONY: start/deps
 start/deps: description = Start dependenciesgit 
 start/deps:
-	docker-compose up -d rabbitmq kafka kafdrop etcd postgres
+	docker-compose up -d rabbitmq kafka kafdrop natsjs
 
 ### Build
 

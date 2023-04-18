@@ -284,13 +284,13 @@ func (c *customCheck) Status() (interface{}, error) {
 	return map[string]int{}, nil
 }
 
-func (d *Dependencies) PreCreateBuckets(ctx context.Context) error {
+func (d *Dependencies) PreCreateBuckets(ctx context.Context, cfg *config.Config) error {
 	buckets := map[string]time.Duration{
 		//BucketNameHere:      0,
 	}
 
 	for bucketName, ttl := range buckets {
-		if err := d.NATSBackend.CreateBucket(ctx, bucketName, ttl, ""); err != nil {
+		if err := d.NATSBackend.CreateBucket(ctx, bucketName, ttl, cfg.NATSNumBucketReplicas); err != nil {
 			if err == nats.ErrStreamNameAlreadyInUse {
 				continue
 			}
