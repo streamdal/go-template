@@ -40,6 +40,8 @@ spec:
               value: "true"
             - name: NATS_TLS_CA_FILE
               value: "{{vault:kubernetes-prod/global:ca.pem}}"
+            - name: NATS_NUM_BUCKET_REPLICAS
+              value: "3"
             - name: DD_AGENT_HOST
               valueFrom:
                 fieldRef:

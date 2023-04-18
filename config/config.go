@@ -73,7 +73,7 @@ type Config struct {
 	NATSTLSCertFile       string   `envconfig:"NATS_TLS_CERT_FILE"`
 	NATSTLSKeyFile        string   `envconfig:"NATS_TLS_KEY_FILE"`
 	NATSTLSCaFile         string   `envconfig:"NATS_TLS_CA_FILE"`
-	NATSNumBucketReplicas int      `envconfig:"NATS_NUM_BUCKET_REPLICAS"  default:"3"`
+	NATSNumBucketReplicas int      `envconfig:"NATS_NUM_BUCKET_REPLICAS"  default:"1"`
 }
 
 func New() *Config {
