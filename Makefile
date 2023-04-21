@@ -1,5 +1,6 @@
 VERSION ?= $(shell git rev-parse --short HEAD)
 SERVICE = go-template
+ARCH ?= $(shell uname -m)
 
 GO = CGO_ENABLED=$(CGO_ENABLED) GOFLAGS=-mod=vendor go
 CGO_ENABLED ?= 0
@@ -54,17 +55,32 @@ start/deps:
 
 .PHONY: build
 build: description = Build $(SERVICE)
-build: clean build/linux build/darwin
+build: clean build/linux-$(ARCH) build/darwin-$(ARCH)
 
-.PHONY: build/linux
-build/linux: description = Build $(SERVICE) for linux
-build/linux: clean
-	GOOS=linux GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-linux
+.PHONY: build/linux-amd64
+build/linux-amd64: description = Build $(SERVICE) for linux
+build/linux-amd64: clean
+	GOOS=linux GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-linux-amd64
 
-.PHONY: build/darwin
-build/darwin: description = Build $(SERVICE) for darwin
-build/darwin: clean
-	GOOS=darwin GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-darwin
+.PHONY: build/linux-x86_64
+build/linux-x86_64: description = Build $(SERVICE) for linux
+build/linux-x86_64: clean
+	GOOS=linux GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-linux-amd64
+
+.PHONY: build/linux-arm64
+build/linux-arm64: description = Build $(SERVICE) for linux
+build/linux-arm64: clean
+	GOOS=linux GOARCH=arm64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-linux-arm64
+
+.PHONY: build/darwin-amd64
+build/darwin-amd64: description = Build $(SERVICE) for darwin
+build/darwin-amd64: clean
+	GOOS=darwin GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-darwin-amd64
+
+.PHONY: build/darwin-arm64
+build/darwin-arm64: description = Build $(SERVICE) for darwin
+build/darwin-arm64: clean
+	GOOS=darwin GOARCH=arm64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-darwin-arm64
 
 .PHONY: clean
 clean: description = Remove existing build artifacts
@@ -93,11 +109,18 @@ test/coverage:
 
 ### Docker
 
+.PHONY: docker/build/local
+docker/build/local: description = Build docker image
+docker/build/local:
+	docker build -t batchcorp/$(SERVICE):$(VERSION) --build-arg TARGETOS=linux --build-arg TARGETARCH=arm64 \
+	-t batchcorp/$(SERVICE):latest \
+	-f ./Dockerfile .
+
 .PHONY: docker/build
 docker/build: description = Build docker image
 docker/build:
-	docker build --platform linux/amd64 -t ghcr.io/batchcorp/$(SERVICE):$(VERSION) \
-	-t ghcr.io/batchcorp/$(SERVICE):latest \
+	docker buildx build --push --platform=linux/amd64,linux/arm64 -t ghcr.io/streamdal/$(SERVICE):$(VERSION) \
+	-t ghcr.io/streamdal/$(SERVICE):latest \
 	-f ./Dockerfile .
 
 .PHONY: docker/run
@@ -108,8 +131,8 @@ docker/run:
 .PHONY: docker/push
 docker/push: description = Push local docker image
 docker/push:
-	docker push ghcr.io/batchcorp/$(SERVICE):$(VERSION) && \
-	docker push ghcr.io/batchcorp/$(SERVICE):latest
+	docker push ghcr.io/streamdal/$(SERVICE):$(VERSION) && \
+	docker push ghcr.io/streamdal/$(SERVICE):latest
 
 
 ### Database Operations
