@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: go-template
-          image: ghcr.io/batchcorp/{{SERVICE}}:{{VERSION}}
+          image: ghcr.io/streamdal/{{SERVICE}}:{{VERSION}}
           ports:
             - containerPort: 8282
           env:
