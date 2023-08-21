@@ -33,7 +33,6 @@ jobs:
       - name: Run build & push
         run: |
           make docker/build
-          make docker/push
       - name: Zip Project
         run: zip -r ${GITHUB_REPOSITORY#*/}.zip .
       - name: Configure AWS Credentials
